@@ -16,6 +16,7 @@
 
 import * as vscode from 'vscode'
 import { convertJsxToSvg } from './svgTransform'
+import ts from 'typescript'
 
 interface SvgCacheEntry {
   dataUri: string
@@ -28,95 +29,128 @@ interface HoverCommandArgs {
   start: number
   length: number
 }
+function findSvgRanges (
+  document: vscode.TextDocument
+): { start: number; end: number }[] {
+  const source = ts.createSourceFile(
+    document.fileName,
+    document.getText(),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  )
+
+  const ranges: { start: number; end: number }[] = []
+
+  function visit (node: ts.Node) {
+    if (
+      ts.isJsxElement(node) &&
+      node.openingElement.tagName.getText() === 'svg'
+    ) {
+      ranges.push({ start: node.pos, end: node.end })
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return ranges
+}
 
 export class SvgHoverProvider implements vscode.HoverProvider {
   private cache: Map<string, SvgCacheEntry> = new Map()
   private cacheMaxAge = 5000 // 5 seconds
 
   public provideHover (
-    document: vscode.TextDocument,
-    position: vscode.Position
-  ): vscode.Hover | null {
-    // Check if hover is enabled in settings
-    const config = vscode.workspace.getConfiguration('betterSvg')
-    const enableHover = config.get<boolean>('enableHover', true)
-    if (!enableHover) {
+  document: vscode.TextDocument,
+  position: vscode.Position
+): vscode.Hover | null {
+  const config = vscode.workspace.getConfiguration('betterSvg')
+  const enableHover = config.get<boolean>('enableHover', true)
+  if (!enableHover) {
+    return null
+  }
+
+  const ranges = findSvgRanges(document)
+
+  for (const { start, end } of ranges) {
+    const range = new vscode.Range(
+      document.positionAt(start),
+      document.positionAt(end)
+    )
+
+    if (!range.contains(position)) {
+      continue
+    }
+
+    const originalSvg = document.getText(range)
+    const sizeBytes = Buffer.byteLength(originalSvg, 'utf8')
+
+    // Cache key (equivalente al anterior, pero sin regex)
+    const cacheKey = `${document.uri.toString()}:${start}:${originalSvg.length}`
+    const cached = this.cache.get(cacheKey)
+    const now = Date.now()
+
+    if (cached && (now - cached.timestamp) < this.cacheMaxAge) {
+      return this.createHoverFromCache(cached, range, document)
+    }
+
+    let svgContent = originalSvg
+    const options = {
+      useCamelCase: ['javascriptreact', 'typescriptreact'].includes(document.languageId)
+    }
+
+    // Convert JSX syntax to valid SVG
+    svgContent = convertJsxToSvg(svgContent, options)
+
+    // Add xmlns if missing
+    const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
+    const hasXmlnsInRoot =
+      svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
+
+    if (!hasXmlnsInRoot) {
+      svgContent = svgContent.replace(
+        /<svg/,
+        '<svg xmlns="http://www.w3.org/2000/svg"'
+      )
+    }
+
+    // Replace currentColor based on theme
+    const isDarkTheme =
+      vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
+      vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
+
+    const contrastColor = isDarkTheme ? '#ffffff' : '#000000'
+    svgContent = svgContent.replace(/currentColor/g, contrastColor)
+
+    // Propagate stroke/fill
+    svgContent = this.propagateStrokeAndFill(svgContent)
+
+    // Ensure minimum size
+    svgContent = this.ensureMinimumSize(svgContent, 128)
+
+    // Validation
+    const validationContent = svgContent.replace(/<style[\s\S]*?<\/style>/gi, '')
+    if (validationContent.includes('{') || validationContent.includes('}')) {
       return null
     }
 
-    const text = document.getText()
-    const svgRegex = /<svg[\s\S]*?>[\s\S]*?<\/svg>/g
-    let match
+    // Encode SVG
+    const base64Svg = Buffer.from(svgContent).toString('base64')
+    const dataUri = `data:image/svg+xml;base64,${base64Svg}`
 
-    while ((match = svgRegex.exec(text))) {
-      const startPos = document.positionAt(match.index)
-      const endPos = document.positionAt(match.index + match[0].length)
-      const range = new vscode.Range(startPos, endPos)
+    // Update cache
+    this.cache.set(cacheKey, {
+      dataUri,
+      sizeBytes,
+      timestamp: now
+    })
 
-      if (range.contains(position)) {
-        const originalSvg = match[0]
-        const sizeBytes = Buffer.byteLength(originalSvg, 'utf8')
-
-        // Check cache
-        const cacheKey = `${document.uri.toString()}:${match.index}:${originalSvg.length}`
-        const cached = this.cache.get(cacheKey)
-        const now = Date.now()
-
-        if (cached && (now - cached.timestamp) < this.cacheMaxAge) {
-          return this.createHoverFromCache(cached, range, document)
-        }
-
-        let svgContent = originalSvg
-        const options = {
-          useCamelCase: ['javascriptreact', 'typescriptreact'].includes(document.languageId)
-        }
-
-        // Convert JSX syntax to valid SVG
-        svgContent = convertJsxToSvg(svgContent, options)
-
-        // Add xmlns if missing (do this early so SVG is valid)
-        // Check ONLY inside the opening <svg ... > tag
-        const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-        const hasXmlnsInRoot = svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
-        
-        if (!hasXmlnsInRoot) {
-          svgContent = svgContent.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
-        }
-
-        // Replace currentColor based on theme
-        const isDarkTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
-                            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
-        const contrastColor = isDarkTheme ? '#ffffff' : '#000000'
-        svgContent = svgContent.replace(/currentColor/g, contrastColor)
-
-        // Extract stroke/fill from parent SVG and propagate to children
-        svgContent = this.propagateStrokeAndFill(svgContent)
-
-        // Ensure minimum size for visibility in hover
-        svgContent = this.ensureMinimumSize(svgContent, 128)
-
-        // Validate that the SVG is likely to be renderable. 
-        // If it still contains JSX-like braces (outside of <style> tags), 
-        // it's likely to show a broken image, so we'd rather show nothing.
-        const validationContent = svgContent.replace(/<style[\s\S]*?<\/style>/gi, '')
-        if (validationContent.includes('{') || validationContent.includes('}')) {
-          return null
-        }
-
-        // Encode SVG for data URI - use base64 for better compatibility
-        const base64Svg = Buffer.from(svgContent).toString('base64')
-        const dataUri = `data:image/svg+xml;base64,${base64Svg}`
-
-        // Update cache
-        this.cache.set(cacheKey, { dataUri, sizeBytes, timestamp: now })
-
-        const commandArgs = this.buildHoverCommandArgs(document, range)
-        return this.createHover(dataUri, sizeBytes, range, commandArgs)
-      }
-    }
-
-    return null
+    const commandArgs = this.buildHoverCommandArgs(document, range)
+    return this.createHover(dataUri, sizeBytes, range, commandArgs)
   }
+
+  return null
+}
 
   private createHover (
     dataUri: string,
