@@ -16,7 +16,7 @@ importers:
         specifier: ^18.15.0
         version: 18.19.130
       '@types/vscode':
-        specifier: ^1.118.0
+        specifier: ^1.85.0
         version: 1.118.0
       '@typescript-eslint/eslint-plugin':
         specifier: 8.59.1
