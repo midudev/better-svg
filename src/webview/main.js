@@ -29,6 +29,7 @@ const vscode = acquireVsCodeApi()
   const optimizeWrapper = $('#optimizeWrapper')
   const zoomLevel = $('#zoomLevel')
   const svgSize = $('#svgSize')
+  const previewFillRatio = 0.8
 
   // Get default color from the color picker value (set by template)
   let currentColor = colorPicker.value
@@ -43,25 +44,111 @@ const vscode = acquireVsCodeApi()
   let panStartX = 0
   let panStartY = 0
   let isAltPressed = false
+  let svgFitFrame = null
 
   // Initialize color
   colorSwatch.style.backgroundColor = currentColor
   svgWrapper.style.color = currentColor
 
-  // Ensure SVG has a width if it's missing both width and height
-  const ensureSvgWidth = () => {
-    const wrapper = $('#svgWrapper')
-    if (wrapper) {
-      const svg = wrapper.querySelector('svg')
-      if (svg && !svg.hasAttribute('width') && !svg.hasAttribute('height')) {
-        const previewWidth = preview.clientWidth
-        svg.setAttribute('width', Math.floor(previewWidth * 0.7) + 'px')
+  const getSvgBounds = (svg) => {
+    try {
+      const bbox = svg.getBBox()
+      if (Number.isFinite(bbox.x) && Number.isFinite(bbox.y) && (bbox.width > 0 || bbox.height > 0)) {
+        return {
+          x: bbox.x,
+          y: bbox.y,
+          width: Math.max(bbox.width, 1),
+          height: Math.max(bbox.height, 1)
+        }
+      }
+    } catch {}
+
+    const viewBox = svg.viewBox?.baseVal
+    if (viewBox && (viewBox.width > 0 || viewBox.height > 0)) {
+      return {
+        x: viewBox.x,
+        y: viewBox.y,
+        width: Math.max(viewBox.width, 1),
+        height: Math.max(viewBox.height, 1)
       }
     }
+
+    const width = Number.parseFloat(svg.getAttribute('width') ?? '')
+    const height = Number.parseFloat(svg.getAttribute('height') ?? '')
+    const rect = svg.getBoundingClientRect()
+    const fallbackWidth = Number.isFinite(width) && width > 0 ? width : rect.width
+    const fallbackHeight = Number.isFinite(height) && height > 0 ? height : rect.height
+
+    if (
+      (Number.isFinite(fallbackWidth) && fallbackWidth > 0) ||
+      (Number.isFinite(fallbackHeight) && fallbackHeight > 0)
+    ) {
+      return {
+        x: 0,
+        y: 0,
+        width: Math.max(fallbackWidth, 1),
+        height: Math.max(fallbackHeight, 1)
+      }
+    }
+
+    return null
   }
 
-  // Ensure initial SVG has width if needed
-  setTimeout(() => ensureSvgWidth(), 0)
+  const fitSvgToPreview = () => {
+    const svg = svgWrapper.querySelector('svg')
+    if (!svg) {
+      return
+    }
+
+    const bounds = getSvgBounds(svg)
+    if (!bounds) {
+      return
+    }
+
+    svg.setAttribute(
+      'viewBox',
+      `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`
+    )
+    svg.removeAttribute('width')
+    svg.removeAttribute('height')
+    svg.style.overflow = 'visible'
+
+    const maxWidth = preview.clientWidth * previewFillRatio
+    const maxHeight = preview.clientHeight * previewFillRatio
+    if (maxWidth <= 0 || maxHeight <= 0) {
+      return
+    }
+
+    const aspectRatio = bounds.width / bounds.height
+    let targetWidth = maxWidth
+    let targetHeight = targetWidth / aspectRatio
+
+    if (!Number.isFinite(targetHeight) || targetHeight > maxHeight) {
+      targetHeight = maxHeight
+      targetWidth = targetHeight * aspectRatio
+    }
+
+    if (!Number.isFinite(targetWidth) || targetWidth > maxWidth) {
+      targetWidth = maxWidth
+      targetHeight = targetWidth / aspectRatio
+    }
+
+    svg.style.width = `${Math.max(Math.round(targetWidth), 1)}px`
+    svg.style.height = `${Math.max(Math.round(targetHeight), 1)}px`
+  }
+
+  const scheduleSvgFit = () => {
+    if (svgFitFrame !== null) {
+      return
+    }
+
+    svgFitFrame = window.requestAnimationFrame(() => {
+      svgFitFrame = null
+      fitSvgToPreview()
+    })
+  }
+
+  scheduleSvgFit()
 
   // Update preview with currentColor
   const updatePreviewWithColor = (content) => {
@@ -69,7 +156,7 @@ const vscode = acquireVsCodeApi()
     if (wrapper) {
       wrapper.innerHTML = content
       wrapper.style.color = currentColor
-      ensureSvgWidth()
+      scheduleSvgFit()
       updateTransform()
     }
   }
@@ -224,6 +311,17 @@ const vscode = acquireVsCodeApi()
     isAltPressed = false
     preview.classList.remove('zoom-out-cursor')
   })
+
+  if ('ResizeObserver' in window) {
+    const resizeObserver = new ResizeObserver(() => {
+      scheduleSvgFit()
+    })
+    resizeObserver.observe(preview)
+  } else {
+    window.addEventListener('resize', () => {
+      scheduleSvgFit()
+    })
+  }
 
   // Listen for updates from extension
   window.addEventListener('message', event => {
