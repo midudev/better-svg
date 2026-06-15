@@ -41,10 +41,16 @@ describe('Astro Support', () => {
     assert.ok(wasJsx, 'Should detect client:only as Astro/JSX')
 
     // Should be protected
-    assert.ok(preparedSvg.includes('data-better-svg-temp-client__COLON__only'), `Should be protected: ${preparedSvg}`)
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-client__COLON__only'),
+      `Should be protected: ${preparedSvg}`
+    )
 
     const final = finalizeAfterOptimization(preparedSvg, wasJsx)
-    assert.ok(final.includes('client:only'), `Final result missing client:only: ${final}`)
+    assert.ok(
+      final.includes('client:only'),
+      `Final result missing client:only: ${final}`
+    )
   })
 })
 
@@ -60,7 +66,9 @@ describe('Vue Support', () => {
 
     // Now it detects and protects Vue syntax
     assert.strictEqual(wasJsx, true)
-    assert.ok(preparedSvg.includes('data-better-svg-temp-__COLON__width="size"'))
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-__COLON__width="size"')
+    )
 
     const final = finalizeAfterOptimization(preparedSvg, wasJsx)
     assert.strictEqual(final, input)
@@ -70,14 +78,18 @@ describe('Vue Support', () => {
     const input = '<svg v-bind:width="size"></svg>'
     const { preparedSvg, wasJsx } = prepareForOptimization(input)
     assert.strictEqual(wasJsx, true)
-    assert.ok(preparedSvg.includes('data-better-svg-temp-v-bind__COLON__width="size"'))
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-v-bind__COLON__width="size"')
+    )
   })
 
   it('should preserve Vue @event handlers', () => {
     const input = '<svg @click="handleClick"></svg>'
     const { preparedSvg, wasJsx } = prepareForOptimization(input)
     assert.strictEqual(wasJsx, true)
-    assert.ok(preparedSvg.includes('data-better-svg-temp-__AT__click="handleClick"'))
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-__AT__click="handleClick"')
+    )
   })
 
   it('should NOT convert kebab-case to camelCase in Astro/Vue (useCamelCase: false)', () => {
@@ -165,7 +177,9 @@ describe('Blade Support', () => {
   })
 
   it('should activate VS Code support for .blade.php files', () => {
-    const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as {
+    const packageJson = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+    ) as {
       activationEvents: string[]
       contributes: {
         languages: Array<{
@@ -176,19 +190,30 @@ describe('Blade Support', () => {
     }
 
     assert.ok(packageJson.activationEvents.includes('onLanguage:blade'))
-    assert.ok(packageJson.contributes.languages.some((language) => {
-      return language.id === 'blade' && language.extensions?.includes('.blade.php')
-    }))
+    assert.ok(
+      packageJson.contributes.languages.some((language) => {
+        return (
+          language.id === 'blade' && language.extensions?.includes('.blade.php')
+        )
+      })
+    )
   })
 
   it('should preserve Blade attribute bags, directives and echoed values', () => {
-    const input = '<svg {{ $attributes->merge([\'class\' => \'size-6\']) }} @class([\'text-primary\' => $active]) viewBox="0 0 24 24"><path fill="{{ $color }}" d="M0 0h24v24H0z" /></svg>'
+    const input =
+      '<svg {{ $attributes->merge([\'class\' => \'size-6\']) }} @class([\'text-primary\' => $active]) viewBox="0 0 24 24"><path fill="{{ $color }}" d="M0 0h24v24H0z" /></svg>'
     const { preparedSvg, wasJsx } = prepareForOptimization(input, options)
 
     assert.strictEqual(wasJsx, true)
-    assert.ok(preparedSvg.includes('data-better-svg-temp-blade-0="__BLADE_BASE64__'))
-    assert.ok(preparedSvg.includes('data-better-svg-temp-blade-1="__BLADE_BASE64__'))
-    assert.ok(preparedSvg.includes('data-better-svg-temp-fill="__BLADE_BASE64__'))
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-blade-0="__BLADE_BASE64__')
+    )
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-blade-1="__BLADE_BASE64__')
+    )
+    assert.ok(
+      preparedSvg.includes('data-better-svg-temp-fill="__BLADE_BASE64__')
+    )
     assert.ok(!preparedSvg.includes('{{ $attributes'))
     assert.ok(!preparedSvg.includes('@class'))
 
@@ -216,7 +241,11 @@ describe('Mixed Framework Edge Cases', () => {
     const { preparedSvg, wasJsx } = prepareForOptimization(input, options)
 
     assert.ok(wasJsx)
-    assert.ok(preparedSvg.includes('data-better-svg-temp-__AT__click__DOT__stop__DOT__prevent'))
+    assert.ok(
+      preparedSvg.includes(
+        'data-better-svg-temp-__AT__click__DOT__stop__DOT__prevent'
+      )
+    )
 
     const final = finalizeAfterOptimization(preparedSvg, wasJsx, options)
     assert.strictEqual(final, input)

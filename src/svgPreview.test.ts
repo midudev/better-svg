@@ -22,7 +22,9 @@ describe('collectSvgPreviewCandidates', () => {
 
     assert.ok(candidate)
     assert.strictEqual(candidate.kind, 'svg')
-    assert.ok(candidate.previewSvg.includes('xmlns="http://www.w3.org/2000/svg"'))
+    assert.ok(
+      candidate.previewSvg.includes('xmlns="http://www.w3.org/2000/svg"')
+    )
     assert.ok(candidate.previewSvg.includes('width="16" height="16"'))
     assert.ok(candidate.previewSvg.includes('fill="#000000"'))
   })
@@ -35,13 +37,21 @@ describe('collectSvgPreviewCandidates', () => {
       </symbol>
     </svg>`
 
-    const symbolCandidate = collectSvgPreviewCandidates(documentText, previewOptions)
-      .find(candidate => candidate.kind === 'symbol')
+    const symbolCandidate = collectSvgPreviewCandidates(
+      documentText,
+      previewOptions
+    ).find((candidate) => candidate.kind === 'symbol')
 
     assert.ok(symbolCandidate)
-    assert.ok(symbolCandidate.previewSvg.startsWith('<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"'))
+    assert.ok(
+      symbolCandidate.previewSvg.startsWith(
+        '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"'
+      )
+    )
     assert.ok(symbolCandidate.previewSvg.includes('viewBox="0 0 24 24"'))
-    assert.ok(symbolCandidate.previewSvg.includes('<circle cx="12" cy="12" r="10"/>'))
+    assert.ok(
+      symbolCandidate.previewSvg.includes('<circle cx="12" cy="12" r="10"/>')
+    )
     assert.ok(!symbolCandidate.previewSvg.includes('<symbol'))
   })
 
@@ -53,13 +63,22 @@ describe('collectSvgPreviewCandidates', () => {
     </svg>
     <svg class="w-5 h-5"><use href="#icon-location"/></svg>`
 
-    const useSvgCandidate = collectSvgPreviewCandidates(documentText, previewOptions)
-      .find(candidate => candidate.kind === 'svg' && candidate.source.includes('<use'))
+    const useSvgCandidate = collectSvgPreviewCandidates(
+      documentText,
+      previewOptions
+    ).find(
+      (candidate) =>
+        candidate.kind === 'svg' && candidate.source.includes('<use')
+    )
 
     assert.ok(useSvgCandidate)
     assert.ok(useSvgCandidate.previewSvg.includes('viewBox="0 0 24 24"'))
-    assert.ok(useSvgCandidate.previewSvg.includes('<defs><symbol id="icon-location"'))
-    assert.ok(useSvgCandidate.previewSvg.includes('<use href="#icon-location"/>'))
+    assert.ok(
+      useSvgCandidate.previewSvg.includes('<defs><symbol id="icon-location"')
+    )
+    assert.ok(
+      useSvgCandidate.previewSvg.includes('<use href="#icon-location"/>')
+    )
   })
 
   it('creates standalone previews for use references', () => {
@@ -70,11 +89,15 @@ describe('collectSvgPreviewCandidates', () => {
     </svg>
     <svg class="w-5 h-5"><use href="#icon-location"/></svg>`
 
-    const useCandidate = collectSvgPreviewCandidates(documentText, previewOptions)
-      .find(candidate => candidate.kind === 'use')
+    const useCandidate = collectSvgPreviewCandidates(
+      documentText,
+      previewOptions
+    ).find((candidate) => candidate.kind === 'use')
 
     assert.ok(useCandidate)
-    assert.ok(useCandidate.previewSvg.includes('<defs><symbol id="icon-location"'))
+    assert.ok(
+      useCandidate.previewSvg.includes('<defs><symbol id="icon-location"')
+    )
     assert.ok(useCandidate.previewSvg.includes('<use href="#icon-location"/>'))
     assert.ok(useCandidate.previewSvg.includes('viewBox="0 0 24 24"'))
   })
@@ -88,15 +111,23 @@ describe('collectSvgPreviewCandidates', () => {
     const useSvgCandidate = collectSvgPreviewCandidates(documentText, {
       ...previewOptions,
       useCamelCase: true
-    }).find(candidate => candidate.kind === 'svg' && candidate.source.includes('xlinkHref'))
+    }).find(
+      (candidate) =>
+        candidate.kind === 'svg' && candidate.source.includes('xlinkHref')
+    )
 
     assert.ok(useSvgCandidate)
-    assert.ok(useSvgCandidate.previewSvg.includes('<defs><symbol id="icon-clock"'))
+    assert.ok(
+      useSvgCandidate.previewSvg.includes('<defs><symbol id="icon-clock"')
+    )
     assert.ok(useSvgCandidate.previewSvg.includes('xlink:href="#icon-clock"'))
   })
 
   it('ignores use references without a matching symbol', () => {
-    const candidates = collectSvgPreviewCandidates('<use href="#missing"/>', previewOptions)
+    const candidates = collectSvgPreviewCandidates(
+      '<use href="#missing"/>',
+      previewOptions
+    )
 
     assert.deepStrictEqual(candidates, [])
   })
@@ -109,7 +140,10 @@ describe('collectSvgPreviewCandidates', () => {
     </svg
     >`
 
-    const [candidate] = collectSvgPreviewCandidates(documentText, previewOptions)
+    const [candidate] = collectSvgPreviewCandidates(
+      documentText,
+      previewOptions
+    )
 
     assert.ok(candidate)
     assert.strictEqual(candidate.kind, 'svg')
@@ -118,9 +152,14 @@ describe('collectSvgPreviewCandidates', () => {
   })
 
   it('detects inline svg markup exported inside a string literal', () => {
-    const documentText = 'export const iconCashierOutline = \'<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>\''
+    const documentText =
+      'export const iconCashierOutline = \'<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>\''
     const offset = documentText.indexOf('<path') + 1
-    const candidate = findSvgPreviewAtOffset(documentText, offset, previewOptions)
+    const candidate = findSvgPreviewAtOffset(
+      documentText,
+      offset,
+      previewOptions
+    )
 
     assert.ok(candidate)
     assert.strictEqual(candidate.kind, 'svg')
@@ -134,7 +173,11 @@ describe('findSvgPreviewAtOffset', () => {
     const documentText = `<svg><symbol id="icon" viewBox="0 0 10 10"><path d="M0 0h10v10H0z"/></symbol></svg>
     <svg><use href="#icon"/></svg>`
     const offset = documentText.indexOf('<use') + 1
-    const candidate = findSvgPreviewAtOffset(documentText, offset, previewOptions)
+    const candidate = findSvgPreviewAtOffset(
+      documentText,
+      offset,
+      previewOptions
+    )
 
     assert.strictEqual(candidate?.kind, 'use')
   })
@@ -142,7 +185,9 @@ describe('findSvgPreviewAtOffset', () => {
 
 describe('svgToDataUri', () => {
   it('encodes renderable svg as an image data uri', () => {
-    const dataUri = svgToDataUri('<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+    const dataUri = svgToDataUri(
+      '<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+    )
 
     assert.ok(dataUri.startsWith('data:image/svg+xml;base64,'))
   })

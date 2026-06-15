@@ -30,5 +30,5 @@ export const SUPPORTED_LANGUAGES = [
   'typescriptreact',
   'vue',
   'xml',
-  'liquid',
+  'liquid'
 ]

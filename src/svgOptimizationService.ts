@@ -2,7 +2,7 @@ import * as vscode from 'vscode'
 import { optimize } from 'svgo/browser'
 import { calculateSavings, formatKilobytes } from './utils'
 
-export function getSvgoPlugins (removeClasses: boolean): any[] {
+export function getSvgoPlugins(removeClasses: boolean): any[] {
   const plugins: any[] = [
     {
       name: 'preset-default',
@@ -21,11 +21,7 @@ export function getSvgoPlugins (removeClasses: boolean): any[] {
       name: 'removeAttrs',
       params: {
         // Remove attributes that are not useful in most cases
-        attrs: [
-          'xmlns:xlink',
-          'xml:space',
-          ...(removeClasses ? ['class'] : [])
-        ]
+        attrs: ['xmlns:xlink', 'xml:space', ...(removeClasses ? ['class'] : [])]
       }
     }
   ]
@@ -33,7 +29,7 @@ export function getSvgoPlugins (removeClasses: boolean): any[] {
   return plugins
 }
 
-export async function optimizeSvgDocument (document: vscode.TextDocument) {
+export async function optimizeSvgDocument(document: vscode.TextDocument) {
   const svgContent = document.getText()
 
   try {
@@ -53,11 +49,10 @@ export async function optimizeSvgDocument (document: vscode.TextDocument) {
 
     await vscode.workspace.applyEdit(edit)
 
-    const {
-      originalSize,
-      optimizedSize,
-      savingPercent
-    } = calculateSavings(svgContent, result.data)
+    const { originalSize, optimizedSize, savingPercent } = calculateSavings(
+      svgContent,
+      result.data
+    )
 
     vscode.window.showInformationMessage(
       `SVG optimized. Reduced from ${formatKilobytes(originalSize)} to ${formatKilobytes(optimizedSize)} (${savingPercent}% saved)`

@@ -22,16 +22,19 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'betterSvg.preview'
   private _view?: vscode.WebviewView | undefined
   private _currentDocument?: vscode.TextDocument | undefined
+  private readonly context: vscode.ExtensionContext
 
-  constructor (private readonly context: vscode.ExtensionContext) { }
+  constructor(context: vscode.ExtensionContext) {
+    this.context = context
+  }
 
-  public get isVisible (): boolean {
+  public get isVisible(): boolean {
     return this._view?.visible ?? false
   }
 
-  public resolveWebviewView (
+  public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ): void {
     this._view = webviewView
@@ -45,13 +48,19 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     const editor = vscode.window.activeTextEditor
     if (editor && editor.document.fileName.endsWith('.svg')) {
       this._currentDocument = editor.document
-      webviewView.webview.html = this.getHtmlForWebview(webviewView.webview, editor.document)
+      webviewView.webview.html = this.getHtmlForWebview(
+        webviewView.webview,
+        editor.document
+      )
     } else {
-      webviewView.webview.html = this.getHtmlForWebview(webviewView.webview, null)
+      webviewView.webview.html = this.getHtmlForWebview(
+        webviewView.webview,
+        null
+      )
     }
 
     // Handle messages from webview
-    webviewView.webview.onDidReceiveMessage(e => {
+    webviewView.webview.onDidReceiveMessage((e) => {
       switch (e.type) {
         case 'update':
           if (this._currentDocument) {
@@ -67,7 +76,7 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     })
   }
 
-  public updatePreview (document: vscode.TextDocument) {
+  public updatePreview(document: vscode.TextDocument) {
     if (this._view) {
       this._currentDocument = document
       this._view.webview.postMessage({
@@ -77,7 +86,7 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  public clearPreview () {
+  public clearPreview() {
     if (this._view) {
       this._currentDocument = undefined
       this._view.webview.postMessage({
@@ -86,7 +95,10 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private getHtmlForWebview (webview: vscode.Webview, document: vscode.TextDocument | null): string {
+  private getHtmlForWebview(
+    webview: vscode.Webview,
+    document: vscode.TextDocument | null
+  ): string {
     try {
       const svgContent = document ? document.getText() : '<svg></svg>'
 
@@ -110,11 +122,18 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
       )
 
       // Read HTML template
-      const htmlUri = vscode.Uri.joinPath(extensionUri, 'dist', 'webview', 'index.html')
+      const htmlUri = vscode.Uri.joinPath(
+        extensionUri,
+        'dist',
+        'webview',
+        'index.html'
+      )
       const htmlPath = htmlUri.fsPath
 
       if (!htmlPath) {
-        vscode.window.showErrorMessage(`Better SVG: htmlPath is undefined! URI: ${htmlUri.toString()}`)
+        vscode.window.showErrorMessage(
+          `Better SVG: htmlPath is undefined! URI: ${htmlUri.toString()}`
+        )
         throw new Error('htmlPath is undefined')
       }
 
@@ -124,8 +143,8 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
       } catch (readError: any) {
         vscode.window.showErrorMessage(
           'Better SVG: Failed to read HTML file!\n' +
-          `Path: ${htmlPath}\n` +
-          `Error: ${readError.message}`
+            `Path: ${htmlPath}\n` +
+            `Error: ${readError.message}`
         )
         throw readError
       }
@@ -142,14 +161,14 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     } catch (error: any) {
       vscode.window.showErrorMessage(
         'Better SVG: Error in getHtmlForWebview!\n' +
-        `Message: ${error.message}\n` +
-        `Stack: ${error.stack?.substring(0, 200)}`
+          `Message: ${error.message}\n` +
+          `Stack: ${error.stack?.substring(0, 200)}`
       )
       throw error
     }
   }
 
-  private updateTextDocument (document: vscode.TextDocument, content: string) {
+  private updateTextDocument(document: vscode.TextDocument, content: string) {
     const edit = new vscode.WorkspaceEdit()
     edit.replace(
       document.uri,

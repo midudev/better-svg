@@ -24,7 +24,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   overflow: hidden;
 }
@@ -70,7 +71,8 @@ button {
   flex: 1;
 }
 
-.zoom-level, .svg-size{
+.zoom-level,
+.svg-size {
   font-size: 10px;
   font-style: italic;
   font-weight: normal;
@@ -95,11 +97,19 @@ button {
   margin: -4px;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 10%,
+      transparent
+    );
   }
 
   &:active {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 15%,
+      transparent
+    );
   }
 }
 
@@ -126,11 +136,19 @@ button {
   margin: -4px;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 10%,
+      transparent
+    );
   }
 
   &:active {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 15%,
+      transparent
+    );
   }
 }
 
@@ -157,11 +175,19 @@ button {
   margin: -4px;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 10%,
+      transparent
+    );
   }
 
   &:active {
-    background-color: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--vscode-foreground) 15%,
+      transparent
+    );
   }
 }
 
@@ -199,11 +225,19 @@ button {
 }
 
 .color-picker-wrapper:hover {
-  background-color: color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-foreground) 10%,
+    transparent
+  );
 }
 
 .color-picker-wrapper:active {
-  background-color: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--vscode-foreground) 15%,
+    transparent
+  );
 }
 
 .color-picker-swatch {
@@ -214,7 +248,7 @@ button {
   pointer-events: none;
 }
 
-input[type="color"] {
+input[type='color'] {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -227,9 +261,12 @@ input[type="color"] {
   padding: 16px;
   background-color: var(--vscode-editorWidget-background);
   background: repeating-conic-gradient(
-    color-mix(in srgb, var(--vscode-editorWidget-background) 90%, transparent) 0% 25%,
-    color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent) 0% 50%
-  ) 50% / 18px 18px;
+      color-mix(in srgb, var(--vscode-editorWidget-background) 90%, transparent)
+        0% 25%,
+      color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent) 0%
+        50%
+    )
+    50% / 18px 18px;
   display: flex;
   align-items: center;
   justify-content: center;

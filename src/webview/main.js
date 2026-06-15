@@ -53,7 +53,11 @@ const vscode = acquireVsCodeApi()
   const getSvgBounds = (svg) => {
     try {
       const bbox = svg.getBBox()
-      if (Number.isFinite(bbox.x) && Number.isFinite(bbox.y) && (bbox.width > 0 || bbox.height > 0)) {
+      if (
+        Number.isFinite(bbox.x) &&
+        Number.isFinite(bbox.y) &&
+        (bbox.width > 0 || bbox.height > 0)
+      ) {
         return {
           x: bbox.x,
           y: bbox.y,
@@ -76,8 +80,10 @@ const vscode = acquireVsCodeApi()
     const width = Number.parseFloat(svg.getAttribute('width') ?? '')
     const height = Number.parseFloat(svg.getAttribute('height') ?? '')
     const rect = svg.getBoundingClientRect()
-    const fallbackWidth = Number.isFinite(width) && width > 0 ? width : rect.width
-    const fallbackHeight = Number.isFinite(height) && height > 0 ? height : rect.height
+    const fallbackWidth =
+      Number.isFinite(width) && width > 0 ? width : rect.width
+    const fallbackHeight =
+      Number.isFinite(height) && height > 0 ? height : rect.height
 
     if (
       (Number.isFinite(fallbackWidth) && fallbackWidth > 0) ||
@@ -198,7 +204,8 @@ const vscode = acquireVsCodeApi()
 
     if (isDarkBackground) {
       preview.classList.add('dark-background')
-      toggleDarkBg.innerHTML = '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 3.34a10 10 0 1 1 -15 8.66l.005 -.324a10 10 0 0 1 14.995 -8.336m-9 1.732a8 8 0 0 0 4.001 14.928l-.001 -16a8 8 0 0 0 -4 1.072" />'
+      toggleDarkBg.innerHTML =
+        '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 3.34a10 10 0 1 1 -15 8.66l.005 -.324a10 10 0 0 1 14.995 -8.336m-9 1.732a8 8 0 0 0 4.001 14.928l-.001 -16a8 8 0 0 0 -4 1.072" />'
       toggleDarkBg.setAttribute('fill', 'currentColor')
       toggleDarkBg.removeAttribute('stroke')
       toggleDarkBg.removeAttribute('stroke-width')
@@ -206,7 +213,8 @@ const vscode = acquireVsCodeApi()
       toggleDarkBg.removeAttribute('stroke-linejoin')
     } else {
       preview.classList.remove('dark-background')
-      toggleDarkBg.innerHTML = '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 17a5 5 0 0 0 0 -10v10" />'
+      toggleDarkBg.innerHTML =
+        '<path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 17a5 5 0 0 0 0 -10v10" />'
       toggleDarkBg.setAttribute('fill', 'none')
       toggleDarkBg.setAttribute('stroke', 'currentColor')
       toggleDarkBg.setAttribute('stroke-width', '1.5')
@@ -229,9 +237,13 @@ const vscode = acquireVsCodeApi()
 
   // Zoom and pan functionality
   preview.addEventListener('click', (e) => {
-    if(wasPanning) return;
+    if (wasPanning) return
 
-    if (e.target === preview || e.target === svgWrapper || e.target.closest('svg')) {
+    if (
+      e.target === preview ||
+      e.target === svgWrapper ||
+      e.target.closest('svg')
+    ) {
       // Check both the stored state and the event's altKey
       if (isAltPressed || e.altKey) {
         // Zoom out
@@ -244,19 +256,27 @@ const vscode = acquireVsCodeApi()
     }
   })
 
-  preview.addEventListener('wheel', (e) => {
-    // Check both the stored state and the event's altKey
-    if (isAltPressed || e.altKey) {
-      e.preventDefault()
-      const delta = e.deltaY > 0 ? -0.1 : 0.1
-      scale = Math.max(0.1, Math.min(10, scale + delta))
-      updateTransform()
-    }
-  }, { passive: false })
+  preview.addEventListener(
+    'wheel',
+    (e) => {
+      // Check both the stored state and the event's altKey
+      if (isAltPressed || e.altKey) {
+        e.preventDefault()
+        const delta = e.deltaY > 0 ? -0.1 : 0.1
+        scale = Math.max(0.1, Math.min(10, scale + delta))
+        updateTransform()
+      }
+    },
+    { passive: false }
+  )
 
   preview.addEventListener('mousedown', (e) => {
     // Only start panning if clicking on the SVG with left button and not on color picker
-    if (e.button === 0 && scale > 1 && !e.target.closest('.preview-header-controls')) {
+    if (
+      e.button === 0 &&
+      scale > 1 &&
+      !e.target.closest('.preview-header-controls')
+    ) {
       isPanning = true
       wasPanning = false
       panStartX = e.clientX - translateX
@@ -268,7 +288,7 @@ const vscode = acquireVsCodeApi()
 
   window.addEventListener('mousemove', (e) => {
     if (isPanning) {
-      wasPanning = true;
+      wasPanning = true
       translateX = e.clientX - panStartX
       translateY = e.clientY - panStartY
       updateTransform()
@@ -324,7 +344,7 @@ const vscode = acquireVsCodeApi()
   }
 
   // Listen for updates from extension
-  window.addEventListener('message', event => {
+  window.addEventListener('message', (event) => {
     const message = event.data
     if (message.type === 'update') {
       updateSvgFileSize()

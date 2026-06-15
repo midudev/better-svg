@@ -15,10 +15,7 @@
  */
 
 import { convertJsxToSvg, type OptimizationOptions } from './svgTransform'
-import {
-  ensureMinimumSize,
-  propagateRootStroke
-} from './utils'
+import { ensureMinimumSize, propagateRootStroke } from './utils'
 
 export type SvgPreviewKind = 'svg' | 'symbol' | 'use'
 
@@ -46,32 +43,51 @@ const SVG_TAG_REGEX = /<svg\b[\s\S]*?>[\s\S]*?<\/svg\s*>/gi
 const SYMBOL_TAG_REGEX = /<symbol\b([^>]*)>([\s\S]*?)<\/symbol\s*>/gi
 const USE_TAG_REGEX = /<use\b[^>]*(?:\/>|>[\s\S]*?<\/use\s*>)/gi
 
-export function collectSvgPreviewCandidates (documentText: string, options: SvgPreviewOptions): SvgPreviewCandidate[] {
+export function collectSvgPreviewCandidates(
+  documentText: string,
+  options: SvgPreviewOptions
+): SvgPreviewCandidate[] {
   const convertedDocumentText = convertJsxToSvg(documentText, options)
   const symbols = collectSymbols(convertedDocumentText)
   const candidates: SvgPreviewCandidate[] = []
 
-  addMatches(documentText, SVG_TAG_REGEX, 'svg', candidates, (source) => buildSvgPreview(source, symbols, options))
-  addMatches(documentText, SYMBOL_TAG_REGEX, 'symbol', candidates, (source) => buildSymbolPreview(source, options))
-  addMatches(documentText, USE_TAG_REGEX, 'use', candidates, (source) => buildUsePreview(source, symbols, options))
+  addMatches(documentText, SVG_TAG_REGEX, 'svg', candidates, (source) =>
+    buildSvgPreview(source, symbols, options)
+  )
+  addMatches(documentText, SYMBOL_TAG_REGEX, 'symbol', candidates, (source) =>
+    buildSymbolPreview(source, options)
+  )
+  addMatches(documentText, USE_TAG_REGEX, 'use', candidates, (source) =>
+    buildUsePreview(source, symbols, options)
+  )
 
-  return candidates.sort((a, b) => a.startIndex - b.startIndex || a.length - b.length)
+  return candidates.sort(
+    (a, b) => a.startIndex - b.startIndex || a.length - b.length
+  )
 }
 
-export function findSvgPreviewAtOffset (documentText: string, offset: number, options: SvgPreviewOptions): SvgPreviewCandidate | null {
+export function findSvgPreviewAtOffset(
+  documentText: string,
+  offset: number,
+  options: SvgPreviewOptions
+): SvgPreviewCandidate | null {
   const candidates = collectSvgPreviewCandidates(documentText, options)
-    .filter(candidate => offset >= candidate.startIndex && offset <= candidate.startIndex + candidate.length)
+    .filter(
+      (candidate) =>
+        offset >= candidate.startIndex &&
+        offset <= candidate.startIndex + candidate.length
+    )
     .sort((a, b) => a.length - b.length)
 
   return candidates[0] ?? null
 }
 
-export function svgToDataUri (svgContent: string): string {
+export function svgToDataUri(svgContent: string): string {
   const base64Svg = Buffer.from(svgContent).toString('base64')
   return `data:image/svg+xml;base64,${base64Svg}`
 }
 
-function addMatches (
+function addMatches(
   documentText: string,
   regex: RegExp,
   kind: SvgPreviewKind,
@@ -97,7 +113,9 @@ function addMatches (
   }
 }
 
-function collectSymbols (documentText: string): Map<string, SvgSymbolDefinition> {
+function collectSymbols(
+  documentText: string
+): Map<string, SvgSymbolDefinition> {
   const symbols = new Map<string, SvgSymbolDefinition>()
   let match: RegExpExecArray | null
 
@@ -120,7 +138,7 @@ function collectSymbols (documentText: string): Map<string, SvgSymbolDefinition>
   return symbols
 }
 
-function buildSvgPreview (
+function buildSvgPreview(
   source: string,
   symbols: Map<string, SvgSymbolDefinition>,
   options: SvgPreviewOptions
@@ -129,9 +147,14 @@ function buildSvgPreview (
   return preparePreviewSvg(resolveUseReferences(svgContent, symbols), options)
 }
 
-function buildSymbolPreview (source: string, options: SvgPreviewOptions): string | null {
+function buildSymbolPreview(
+  source: string,
+  options: SvgPreviewOptions
+): string | null {
   const symbolContent = convertJsxToSvg(source, options)
-  const match = symbolContent.match(/^<symbol\b([^>]*)>([\s\S]*?)<\/symbol\s*>$/i)
+  const match = symbolContent.match(
+    /^<symbol\b([^>]*)>([\s\S]*?)<\/symbol\s*>$/i
+  )
   if (!match) {
     return null
   }
@@ -140,7 +163,7 @@ function buildSymbolPreview (source: string, options: SvgPreviewOptions): string
   return preparePreviewSvg(`<svg${attrs}>${match[2] ?? ''}</svg>`, options)
 }
 
-function buildUsePreview (
+function buildUsePreview(
   source: string,
   symbols: Map<string, SvgSymbolDefinition>,
   options: SvgPreviewOptions
@@ -157,12 +180,19 @@ function buildUsePreview (
   }
 
   const rootAttrs = omitAttributes(symbol.attrs, ['id'])
-  return preparePreviewSvg(`<svg${rootAttrs}><defs>${symbol.source}</defs>${useContent}</svg>`, options)
+  return preparePreviewSvg(
+    `<svg${rootAttrs}><defs>${symbol.source}</defs>${useContent}</svg>`,
+    options
+  )
 }
 
-function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbolDefinition>): string {
-  const referenceIds = getUseReferenceIds(svgContent)
-    .filter(id => !hasSymbolDefinition(svgContent, id) && symbols.has(id))
+function resolveUseReferences(
+  svgContent: string,
+  symbols: Map<string, SvgSymbolDefinition>
+): string {
+  const referenceIds = getUseReferenceIds(svgContent).filter(
+    (id) => !hasSymbolDefinition(svgContent, id) && symbols.has(id)
+  )
 
   if (referenceIds.length === 0) {
     return svgContent
@@ -170,7 +200,7 @@ function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbo
 
   const uniqueReferenceIds = [...new Set(referenceIds)]
   const defs = uniqueReferenceIds
-    .map(id => symbols.get(id)?.source)
+    .map((id) => symbols.get(id)?.source)
     .filter((source): source is string => Boolean(source))
     .join('')
 
@@ -180,12 +210,18 @@ function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbo
   }
 
   let resolvedSvg = ensureRootViewBox(svgContent, symbols.get(firstReferenceId))
-  resolvedSvg = resolvedSvg.replace(/<svg\b[^>]*>/i, match => `${match}<defs>${defs}</defs>`)
+  resolvedSvg = resolvedSvg.replace(
+    /<svg\b[^>]*>/i,
+    (match) => `${match}<defs>${defs}</defs>`
+  )
 
   return resolvedSvg
 }
 
-function preparePreviewSvg (svgContent: string, options: SvgPreviewOptions): string | null {
+function preparePreviewSvg(
+  svgContent: string,
+  options: SvgPreviewOptions
+): string | null {
   let previewSvg = ensureXmlns(svgContent)
   previewSvg = previewSvg.replace(/currentColor/g, options.contrastColor)
   previewSvg = propagateRootStroke(previewSvg)
@@ -199,9 +235,10 @@ function preparePreviewSvg (svgContent: string, options: SvgPreviewOptions): str
   return previewSvg
 }
 
-function ensureXmlns (svgContent: string): string {
+function ensureXmlns(svgContent: string): string {
   const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-  const hasXmlnsInRoot = svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
+  const hasXmlnsInRoot =
+    svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
 
   if (hasXmlnsInRoot) {
     return svgContent
@@ -210,7 +247,10 @@ function ensureXmlns (svgContent: string): string {
   return svgContent.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"')
 }
 
-function ensureRootViewBox (svgContent: string, symbol: SvgSymbolDefinition | undefined): string {
+function ensureRootViewBox(
+  svgContent: string,
+  symbol: SvgSymbolDefinition | undefined
+): string {
   if (!symbol) {
     return svgContent
   }
@@ -228,12 +268,15 @@ function ensureRootViewBox (svgContent: string, symbol: SvgSymbolDefinition | un
   return svgContent.replace(/<svg\b([^>]*)>/i, `<svg$1 viewBox="${viewBox}">`)
 }
 
-function hasSymbolDefinition (svgContent: string, id: string): boolean {
+function hasSymbolDefinition(svgContent: string, id: string): boolean {
   const escapedId = escapeRegExp(id)
-  return new RegExp(`<symbol\\b[^>]*\\bid\\s*=\\s*["']${escapedId}["']`, 'i').test(svgContent)
+  return new RegExp(
+    `<symbol\\b[^>]*\\bid\\s*=\\s*["']${escapedId}["']`,
+    'i'
+  ).test(svgContent)
 }
 
-function getUseReferenceIds (svgContent: string): string[] {
+function getUseReferenceIds(svgContent: string): string[] {
   const referenceIds: string[] = []
   let match: RegExpExecArray | null
 
@@ -248,8 +291,9 @@ function getUseReferenceIds (svgContent: string): string[] {
   return referenceIds
 }
 
-function getUseReferenceId (useTag: string): string | null {
-  const href = getAttribute(useTag, 'href') ?? getAttribute(useTag, 'xlink:href')
+function getUseReferenceId(useTag: string): string | null {
+  const href =
+    getAttribute(useTag, 'href') ?? getAttribute(useTag, 'xlink:href')
   if (!href?.startsWith('#')) {
     return null
   }
@@ -257,16 +301,21 @@ function getUseReferenceId (useTag: string): string | null {
   return href.slice(1)
 }
 
-function getAttribute (attrs: string, name: string): string | null {
+function getAttribute(attrs: string, name: string): string | null {
   const escapedName = escapeRegExp(name)
-  const match = attrs.match(new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
+  const match = attrs.match(
+    new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i')
+  )
   return match?.[2] ?? null
 }
 
-function omitAttributes (attrs: string, names: string[]): string {
+function omitAttributes(attrs: string, names: string[]): string {
   const result = names.reduce((currentAttrs, name) => {
     const escapedName = escapeRegExp(name)
-    return currentAttrs.replace(new RegExp(`\\s*\\b${escapedName}\\s*=\\s*(["']).*?\\1`, 'gi'), '')
+    return currentAttrs.replace(
+      new RegExp(`\\s*\\b${escapedName}\\s*=\\s*(["']).*?\\1`, 'gi'),
+      ''
+    )
   }, attrs)
 
   if (result.length > 0 && !/^\s/.test(result)) {
@@ -276,6 +325,6 @@ function omitAttributes (attrs: string, names: string[]): string {
   return result
 }
 
-function escapeRegExp (value: string): string {
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

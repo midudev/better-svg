@@ -33,9 +33,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
-          cache: "pnpm"
-          cache-dependency-path: "pnpm-lock.yaml"
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       # Install dependencies strictly according to the lockfile
       - name: Install dependencies

@@ -35,8 +35,12 @@ interface HoverCommandArgs {
   length: number
 }
 
-function getPreviewOptions (languageId: string, minSize: number): SvgPreviewOptions {
-  const isDarkTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
+function getPreviewOptions(
+  languageId: string,
+  minSize: number
+): SvgPreviewOptions {
+  const isDarkTheme =
+    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
     vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
 
   return {
@@ -50,7 +54,7 @@ export class SvgHoverProvider implements vscode.HoverProvider {
   private cache: Map<string, SvgCacheEntry> = new Map()
   private cacheMaxAge = 5000 // 5 seconds
 
-  public provideHover (
+  public provideHover(
     document: vscode.TextDocument,
     position: vscode.Position
   ): vscode.Hover | null {
@@ -63,7 +67,11 @@ export class SvgHoverProvider implements vscode.HoverProvider {
 
     const text = document.getText()
     const offset = document.offsetAt(position)
-    const candidate = findSvgPreviewAtOffset(text, offset, getPreviewOptions(document.languageId, 128))
+    const candidate = findSvgPreviewAtOffset(
+      text,
+      offset,
+      getPreviewOptions(document.languageId, 128)
+    )
 
     if (!candidate) {
       return null
@@ -76,9 +84,12 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     const cacheKey = `${document.uri.toString()}:${candidate.kind}:${candidate.startIndex}:${candidate.length}:${candidate.previewSvg.length}`
     const cached = this.cache.get(cacheKey)
     const now = Date.now()
-    const commandArgs = candidate.kind === 'svg' ? this.buildHoverCommandArgs(document, range) : null
+    const commandArgs =
+      candidate.kind === 'svg'
+        ? this.buildHoverCommandArgs(document, range)
+        : null
 
-    if (cached && (now - cached.timestamp) < this.cacheMaxAge) {
+    if (cached && now - cached.timestamp < this.cacheMaxAge) {
       return this.createHoverFromCache(cached, range, commandArgs)
     }
 
@@ -88,7 +99,7 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     return this.createHover(dataUri, sizeBytes, range, commandArgs)
   }
 
-  private createHover (
+  private createHover(
     dataUri: string,
     sizeBytes: number,
     range: vscode.Range,
@@ -102,21 +113,28 @@ export class SvgHoverProvider implements vscode.HoverProvider {
 
     if (commandArgs) {
       const encodedArgs = encodeURIComponent(JSON.stringify(commandArgs))
-      markdown.appendMarkdown(`[⚡ Optimizar SVG](command:betterSvg.optimizeFromHover?${encodedArgs})`)
+      markdown.appendMarkdown(
+        `[⚡ Optimizar SVG](command:betterSvg.optimizeFromHover?${encodedArgs})`
+      )
     }
 
     return new vscode.Hover(markdown, range)
   }
 
-  private createHoverFromCache (
+  private createHoverFromCache(
     cached: SvgCacheEntry,
     range: vscode.Range,
     commandArgs: HoverCommandArgs | null
   ): vscode.Hover {
-    return this.createHover(cached.dataUri, cached.sizeBytes, range, commandArgs)
+    return this.createHover(
+      cached.dataUri,
+      cached.sizeBytes,
+      range,
+      commandArgs
+    )
   }
 
-  private buildHoverCommandArgs (
+  private buildHoverCommandArgs(
     document: vscode.TextDocument,
     range: vscode.Range
   ): HoverCommandArgs {
@@ -129,15 +147,16 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     }
   }
 
-  public clearCache (): void {
+  public clearCache(): void {
     this.cache.clear()
   }
 }
 
 export class SvgGutterPreview {
-  private decorationTypes: Map<string, vscode.TextEditorDecorationType[]> = new Map()
+  private decorationTypes: Map<string, vscode.TextEditorDecorationType[]> =
+    new Map()
 
-  public updateDecorations (editor: vscode.TextEditor) {
+  public updateDecorations(editor: vscode.TextEditor) {
     if (!editor) {
       return
     }
@@ -180,16 +199,16 @@ export class SvgGutterPreview {
     this.decorationTypes.set(docUri, newDecorationTypes)
   }
 
-  private disposeDecorationsForUri (uri: string) {
+  private disposeDecorationsForUri(uri: string) {
     const types = this.decorationTypes.get(uri)
     if (types) {
-      types.forEach(t => t.dispose())
+      types.forEach((t) => t.dispose())
       this.decorationTypes.delete(uri)
     }
   }
 
-  public dispose () {
-    this.decorationTypes.forEach(types => types.forEach(t => t.dispose()))
+  public dispose() {
+    this.decorationTypes.forEach((types) => types.forEach((t) => t.dispose()))
     this.decorationTypes.clear()
   }
 }
