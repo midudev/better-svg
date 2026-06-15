@@ -26,17 +26,26 @@
   },
   "homepage": "https://github.com/midudev/better-svg#readme",
   "qna": "marketplace",
+  "packageManager": "pnpm@9.0.0",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.85.0",
+    "node": ">=18.15.0"
   },
   "activationEvents": [
-    "onLanguage:svg",
-    "onLanguage:xml",
     "onLanguage:astro",
+    "onLanguage:django-html",
+    "onLanguage:ejs",
+    "onLanguage:erb",
+    "onLanguage:html",
+    "onLanguage:javascript",
     "onLanguage:javascriptreact",
-    "onLanguage:typescriptreact",
+    "onLanguage:php",
     "onLanguage:svelte",
+    "onLanguage:svg",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
     "onLanguage:vue",
+    "onLanguage:xml",
     "onLanguage:liquid"
   ],
   "categories": [
@@ -57,6 +66,14 @@
     "optimize"
   ],
   "main": "./dist/extension.js",
+  "files": [
+    "static/icon.png",
+    "dist/webview",
+    "dist/extension.js",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
   "contributes": {
     "views": {
       "explorer": [
@@ -72,18 +89,35 @@
     "languages": [
       {
         "id": "liquid",
-        "aliases": ["Liquid"],
-        "extensions": [".liquid"]
+        "aliases": [
+          "Liquid"
+        ],
+        "extensions": [
+          ".liquid"
+        ]
       }
     ],
     "commands": [
       {
         "command": "betterSvg.optimize",
         "title": "Optimize SVG",
+        "category": "Better SVG",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "betterSvg.optimizeFromHover",
+        "title": "Optimize SVG from Hover",
+        "category": "Better SVG",
         "icon": "$(zap)"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "betterSvg.optimize",
+          "when": "editorTextFocus && resourceExtname == .svg"
+        }
+      ],
       "editor/title": [
         {
           "command": "betterSvg.optimize",
@@ -135,32 +169,39 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && node esbuild.js && npm run copy-webview",
+    "pnpm": "pnpm",
+    "vscode:prepublish": "pnpm package",
+    "compile": "pnpm check-types && node esbuild.js && pnpm copy-webview",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "watch:webview": "node -e \"require('fs').watch('src/webview', () => require('child_process').exec('npm run copy-webview'))\"",
-    "package": "npm run check-types && node esbuild.js --production && npm run copy-webview",
+    "watch:webview": "node -e \"require('fs').watch('src/webview', () => require('child_process').exec('pnpm copy-webview'))\"",
+    "package": "pnpm check-types && node esbuild.js --production && pnpm copy-webview",
+    "check": "pnpm check-types",
     "check-types": "tsc --noEmit",
     "copy-webview": "mkdir -p dist/webview && cp src/webview/*.html src/webview/*.css src/webview/*.js dist/webview/",
     "test": "node --import tsx --test src/*.test.ts",
     "test:vscode": "vscode-test",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src"
   },
   "devDependencies": {
-    "@types/node": "24.x",
+    "@types/node": "^18.15.0",
     "@types/vscode": "^1.85.0",
-    "@typescript-eslint/eslint-plugin": "8.48.0",
-    "@typescript-eslint/parser": "8.48.0",
-    "esbuild": "0.27.0",
-    "eslint": "9.39.1",
-    "neostandard": "0.12.2",
+    "@typescript-eslint/eslint-plugin": "8.60.1",
+    "@typescript-eslint/parser": "8.60.1",
+    "esbuild": "0.28.0",
+    "eslint": "9.39.4",
+    "neostandard": "0.13.0",
     "npm-run-all": "4.1.5",
-    "tsx": "4.19.2",
+    "tsx": "4.22.4",
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "svgo": "4.0.0"
+    "svgo": "4.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

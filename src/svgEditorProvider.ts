@@ -16,14 +16,14 @@
 
 import * as vscode from 'vscode'
 import * as fs from 'fs'
-import { optimizeSvgDocument } from './extension'
+import { optimizeSvgDocument } from './svgOptimizationService'
 
 export class SvgPreviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'betterSvg.preview'
   private _view?: vscode.WebviewView | undefined
   private _currentDocument?: vscode.TextDocument | undefined
 
-  constructor (private readonly context: vscode.ExtensionContext) {}
+  constructor (private readonly context: vscode.ExtensionContext) { }
 
   public get isVisible (): boolean {
     return this._view?.visible ?? false

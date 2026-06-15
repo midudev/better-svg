@@ -1,6 +1,6 @@
-import neostandard from 'neostandard'
+import neostandard from "neostandard";
 
 export default neostandard({
   ts: true,
-  ignores: ['out/**', 'node_modules/**'],
-})
+  ignores: ["dist/**", "node_modules/**", "src/webview/**"],
+});

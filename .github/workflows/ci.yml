@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Cancel previous runs for the same branch to avoid duplicated builds
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout full repository history (useful for future release workflows)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Ensure the package manager version declared in package.json is respected
+      - name: Enable Corepack
+        run: corepack enable
+
+      # Install pnpm explicitly for deterministic CI behavior
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      # Align Node.js version with local development (.nvmrc)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+          cache-dependency-path: "pnpm-lock.yaml"
+
+      # Install dependencies strictly according to the lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      # Validate code quality (non-destructive)
+      # Fails if lint, formatting, or import organization issues exist
+      - name: Validate code quality
+        run: pnpm check
+
+      # Compile TypeScript sources to ensure extension integrity
+      - name: Compile extension
+        run: pnpm compile
