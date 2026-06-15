@@ -20,6 +20,7 @@ describe('collectSvgPreviewCandidates', () => {
       previewOptions
     )
 
+    assert.ok(candidate)
     assert.strictEqual(candidate.kind, 'svg')
     assert.ok(candidate.previewSvg.includes('xmlns="http://www.w3.org/2000/svg"'))
     assert.ok(candidate.previewSvg.includes('width="16" height="16"'))

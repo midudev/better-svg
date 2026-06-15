@@ -20,8 +20,8 @@ import { optimizeSvgDocument } from './svgOptimizationService'
 
 export class SvgPreviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'betterSvg.preview'
-  private _view?: vscode.WebviewView
-  private _currentDocument?: vscode.TextDocument
+  private _view?: vscode.WebviewView | undefined
+  private _currentDocument?: vscode.TextDocument | undefined
 
   constructor (private readonly context: vscode.ExtensionContext) { }
 

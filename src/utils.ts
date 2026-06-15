@@ -79,8 +79,8 @@ export function ensureMinimumSize (svgContent: string, minSize: number): string 
     if (viewBox) {
       const viewBoxParts = viewBox.split(/\s+/)
       if (viewBoxParts.length >= 4) {
-        const vbWidth = parseFloat(viewBoxParts[2])
-        const vbHeight = parseFloat(viewBoxParts[3])
+        const vbWidth = parseFloat(viewBoxParts[2] ?? '0')
+        const vbHeight = parseFloat(viewBoxParts[3] ?? '0')
         const scale = minSize / Math.max(vbWidth, vbHeight)
         const newWidth = Math.round(vbWidth * scale)
         const newHeight = Math.round(vbHeight * scale)
@@ -98,8 +98,8 @@ export function ensureMinimumSize (svgContent: string, minSize: number): string 
     return svgContent
   }
 
-  const width = parseFloat(widthMatch[1])
-  const height = parseFloat(heightMatch[1])
+  const width = parseFloat(widthMatch[1] ?? '0')
+  const height = parseFloat(heightMatch[1] ?? '0')
 
   if (width >= minSize || height >= minSize) {
     return svgContent

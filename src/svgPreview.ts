@@ -174,7 +174,12 @@ function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbo
     .filter((source): source is string => Boolean(source))
     .join('')
 
-  let resolvedSvg = ensureRootViewBox(svgContent, symbols.get(uniqueReferenceIds[0]))
+  const firstReferenceId = uniqueReferenceIds[0]
+  if (!firstReferenceId) {
+    return svgContent
+  }
+
+  let resolvedSvg = ensureRootViewBox(svgContent, symbols.get(firstReferenceId))
   resolvedSvg = resolvedSvg.replace(/<svg\b[^>]*>/i, match => `${match}<defs>${defs}</defs>`)
 
   return resolvedSvg
