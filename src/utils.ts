@@ -22,6 +22,10 @@ export function formatBytes (bytes: number): string {
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
+export function formatKilobytes (bytes: number): string {
+  return `${(bytes / 1024).toFixed(2)} KB`
+}
+
 /**
  * Calculates savings between original and optimized content
  */
@@ -37,4 +41,89 @@ export function calculateSavings (originalContent: string, optimizedContent: str
     originalSizeFormatted: formatBytes(originalSize),
     optimizedSizeFormatted: formatBytes(optimizedSize)
   }
+}
+
+export function propagateRootStroke (svgContent: string): string {
+  const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
+  if (!svgOpenTagMatch) return svgContent
+
+  const svgOpenTag = svgOpenTagMatch[0]
+  const stroke = getAttribute(svgOpenTag, 'stroke')
+
+  if (!stroke) {
+    return svgContent
+  }
+
+  const shapeElements = ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'rect']
+  const shapeRegex = new RegExp(`<(${shapeElements.join('|')})([^>]*?)(\\/?>)`, 'gi')
+
+  return svgContent.replace(shapeRegex, (match, tagName, attrs, ending) => {
+    if (attrs && /\bstroke\s*=/.test(attrs)) {
+      return match
+    }
+
+    return `<${tagName}${attrs || ''} stroke="${stroke}"${ending}`
+  })
+}
+
+export function ensureMinimumSize (svgContent: string, minSize: number): string {
+  const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
+  if (!svgOpenTagMatch) return svgContent
+
+  const svgOpenTag = svgOpenTagMatch[0]
+  const hasWidth = /\bwidth\s*=\s*["'][^"']+["']/.test(svgOpenTag)
+  const hasHeight = /\bheight\s*=\s*["'][^"']+["']/.test(svgOpenTag)
+  const viewBox = getAttribute(svgOpenTag, 'viewBox')
+
+  if (!hasWidth && !hasHeight) {
+    if (viewBox) {
+      const viewBoxParts = viewBox.split(/\s+/)
+      if (viewBoxParts.length >= 4) {
+        const vbWidth = parseFloat(viewBoxParts[2] ?? '0')
+        const vbHeight = parseFloat(viewBoxParts[3] ?? '0')
+        const scale = minSize / Math.max(vbWidth, vbHeight)
+        const newWidth = Math.round(vbWidth * scale)
+        const newHeight = Math.round(vbHeight * scale)
+        return addRootSvgAttributes(svgContent, `width="${newWidth}" height="${newHeight}"`)
+      }
+    }
+
+    return addRootSvgAttributes(svgContent, `width="${minSize}" height="${minSize}"`)
+  }
+
+  const widthMatch = svgOpenTag.match(/\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
+  const heightMatch = svgOpenTag.match(/\bheight\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
+
+  if (!widthMatch || !heightMatch) {
+    return svgContent
+  }
+
+  const width = parseFloat(widthMatch[1] ?? '0')
+  const height = parseFloat(heightMatch[1] ?? '0')
+
+  if (width >= minSize || height >= minSize) {
+    return svgContent
+  }
+
+  const scale = minSize / Math.max(width, height)
+  const newWidth = Math.round(width * scale)
+  const newHeight = Math.round(height * scale)
+
+  return svgContent
+    .replace(/\bwidth\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `width="${newWidth}"`)
+    .replace(/\bheight\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `height="${newHeight}"`)
+}
+
+function getAttribute (attrs: string, name: string): string | null {
+  const escapedName = escapeRegExp(name)
+  const match = attrs.match(new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
+  return match?.[2] ?? null
+}
+
+function addRootSvgAttributes (svgContent: string, attributes: string): string {
+  return svgContent.replace(/<svg\b/i, match => `${match} ${attributes}`)
+}
+
+function escapeRegExp (value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

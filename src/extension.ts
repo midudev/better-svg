@@ -20,6 +20,7 @@ import { SvgGutterPreview, SvgHoverProvider } from './svgGutterPreview'
 import { optimize } from 'svgo/browser'
 import { prepareForOptimization, finalizeAfterOptimization } from './svgTransform'
 import { SUPPORTED_LANGUAGES } from './consts'
+import { calculateSavings } from './utils'
 import { getSvgoPlugins, optimizeSvgDocument } from './svgOptimizationService'
 
 let previewProvider: SvgPreviewProvider
@@ -293,22 +294,14 @@ export async function optimizeSvgInline (document: vscode.TextDocument, svgConte
 
     await vscode.workspace.applyEdit(edit)
 
-    // Calculate savings
-    const originalSize = Buffer.byteLength(svgContent, 'utf8')
-    const optimizedSize = Buffer.byteLength(finalSvg, 'utf8')
-    const savingPercent = ((originalSize - optimizedSize) / originalSize * 100).toFixed(2)
-    const originalSizeBytes = originalSize
-    const optimizedSizeBytes = optimizedSize
-
-    const formatBytes = (bytes: number): string => {
-      if (bytes < 1024) {
-        return `${bytes} bytes`
-      }
-      return `${(bytes / 1024).toFixed(2)} KB`
-    }
+    const {
+      originalSizeFormatted,
+      optimizedSizeFormatted,
+      savingPercent
+    } = calculateSavings(svgContent, finalSvg)
 
     vscode.window.showInformationMessage(
-      `SVG optimized. Reduced from ${formatBytes(originalSizeBytes)} to ${formatBytes(optimizedSizeBytes)} (${savingPercent}% saved)`
+      `SVG optimized. Reduced from ${originalSizeFormatted} to ${optimizedSizeFormatted} (${savingPercent}% saved)`
     )
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to optimize SVG: ${error}`)

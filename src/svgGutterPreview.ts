@@ -21,6 +21,7 @@ import {
   svgToDataUri,
   type SvgPreviewOptions
 } from './svgPreview'
+import { formatBytes } from './utils'
 
 interface SvgCacheEntry {
   dataUri: string
@@ -97,7 +98,7 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     markdown.isTrusted = true
     markdown.supportHtml = true
     markdown.appendMarkdown(`![SVG Preview](${dataUri})\n\n`)
-    markdown.appendMarkdown(`**Size:** ${this.formatBytes(sizeBytes)}\n\n`)
+    markdown.appendMarkdown(`**Size:** ${formatBytes(sizeBytes)}\n\n`)
 
     if (commandArgs) {
       const encodedArgs = encodeURIComponent(JSON.stringify(commandArgs))
@@ -113,14 +114,6 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     commandArgs: HoverCommandArgs | null
   ): vscode.Hover {
     return this.createHover(cached.dataUri, cached.sizeBytes, range, commandArgs)
-  }
-
-  private formatBytes (bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} bytes`
-    }
-    const kb = bytes / 1024
-    return `${kb.toFixed(2)} KB`
   }
 
   private buildHoverCommandArgs (
