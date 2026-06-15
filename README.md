@@ -59,12 +59,17 @@
 
 Better SVG isn't just for `.svg` files. It understands SVG syntax inside a wide range of modern web frameworks:
 
-- **Static**: `.svg`, `.xml`
+- **Static**: `.svg`, `.xml`, `.html`
 - **React**: `.jsx`, `.tsx`
 - **Vue**: `.vue`
 - **Astro**: `.astro`
 - **Svelte**: `.svelte`
+- **PHP**: `.php`
 - **Laravel Blade**: `.blade.php`
+- **Liquid (Shopify)**: `.liquid`
+- **Django**: `django-html` templates
+- **EJS**: `.ejs`
+- **ERB (Ruby)**: `.erb`
 
 The extension automatically detects SVG tags within these files, providing gutter icons, hover previews, and framework-aware optimization.
 
@@ -87,6 +92,8 @@ When optimizing inline SVGs (like in React or Vue), Better SVG:
 
 Customize your workflow through **Settings → Extensions → Better SVG**:
 
+### Preview & UI
+
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
 | `betterSvg.autoReveal` | `boolean` | `true` | Automatically reveal and expand the SVG Preview panel in Explorer when opening SVG files. |
@@ -94,7 +101,17 @@ Customize your workflow through **Settings → Extensions → Better SVG**:
 | `betterSvg.enableHover` | `boolean` | `true` | Enable the hover preview when mouse is over SVG code. |
 | `betterSvg.showGutterPreview` | `boolean` | `true` | Show small preview icons next to line numbers in the gutter. |
 | `betterSvg.defaultColor` | `string` | `"#ffffff"` | The hex color used to replace `currentColor` in previews. |
-| `betterSvg.removeClasses` | `boolean` | `true` | Whether to remove `class` attributes when running the optimization. |
+
+### Optimization (SVGO)
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `betterSvg.removeClasses` | `boolean` | `true` | Remove `class` attributes during optimization. Only applies to standalone `.svg` files; inline framework SVGs always keep their classes. |
+| `betterSvg.removeComments` | `boolean` | `true` | Remove comments from the SVG during optimization. |
+| `betterSvg.removeDoctype` | `boolean` | `true` | Remove the `<!DOCTYPE>` declaration during optimization. |
+| `betterSvg.cleanupIds` | `boolean` | `false` | Minify and remove unused IDs. Disabled by default because it can break sprites, references and animations. |
+| `betterSvg.floatPrecision` | `number` | `3` | Number of decimal places to keep for numeric values (lower means smaller files but less precision). |
+| `betterSvg.multipass` | `boolean` | `true` | Run SVGO multiple times until the output stops shrinking for better compression. |
 
 ## License
 
