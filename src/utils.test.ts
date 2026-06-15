@@ -38,7 +38,8 @@ describe('calculateSavings', () => {
 
 describe('propagateRootStroke', () => {
   it('copies root stroke to child shapes without an explicit stroke', () => {
-    const svg = '<svg stroke="currentColor"><path d="M0 0" /><circle stroke="red" /></svg>'
+    const svg =
+      '<svg stroke="currentColor"><path d="M0 0" /><circle stroke="red" /></svg>'
     const result = propagateRootStroke(svg)
     const pathTag = result.match(/<path\b[^>]*>/)?.[0] ?? ''
     const circleTag = result.match(/<circle\b[^>]*>/)?.[0] ?? ''

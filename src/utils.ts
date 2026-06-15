@@ -17,22 +17,28 @@
 /**
  * Formats bytes into a readable string (bytes or KB)
  */
-export function formatBytes (bytes: number): string {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} bytes`
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
-export function formatKilobytes (bytes: number): string {
+export function formatKilobytes(bytes: number): string {
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
 /**
  * Calculates savings between original and optimized content
  */
-export function calculateSavings (originalContent: string, optimizedContent: string) {
+export function calculateSavings(
+  originalContent: string,
+  optimizedContent: string
+) {
   const originalSize = Buffer.byteLength(originalContent, 'utf8')
   const optimizedSize = Buffer.byteLength(optimizedContent, 'utf8')
-  const savingPercent = ((originalSize - optimizedSize) / originalSize * 100).toFixed(2)
+  const savingPercent = (
+    ((originalSize - optimizedSize) / originalSize) *
+    100
+  ).toFixed(2)
 
   return {
     originalSize,
@@ -43,7 +49,7 @@ export function calculateSavings (originalContent: string, optimizedContent: str
   }
 }
 
-export function propagateRootStroke (svgContent: string): string {
+export function propagateRootStroke(svgContent: string): string {
   const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
   if (!svgOpenTagMatch) return svgContent
 
@@ -54,8 +60,19 @@ export function propagateRootStroke (svgContent: string): string {
     return svgContent
   }
 
-  const shapeElements = ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'rect']
-  const shapeRegex = new RegExp(`<(${shapeElements.join('|')})([^>]*?)(\\/?>)`, 'gi')
+  const shapeElements = [
+    'path',
+    'line',
+    'polyline',
+    'polygon',
+    'circle',
+    'ellipse',
+    'rect'
+  ]
+  const shapeRegex = new RegExp(
+    `<(${shapeElements.join('|')})([^>]*?)(\\/?>)`,
+    'gi'
+  )
 
   return svgContent.replace(shapeRegex, (match, tagName, attrs, ending) => {
     if (attrs && /\bstroke\s*=/.test(attrs)) {
@@ -66,7 +83,7 @@ export function propagateRootStroke (svgContent: string): string {
   })
 }
 
-export function ensureMinimumSize (svgContent: string, minSize: number): string {
+export function ensureMinimumSize(svgContent: string, minSize: number): string {
   const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
   if (!svgOpenTagMatch) return svgContent
 
@@ -84,15 +101,25 @@ export function ensureMinimumSize (svgContent: string, minSize: number): string 
         const scale = minSize / Math.max(vbWidth, vbHeight)
         const newWidth = Math.round(vbWidth * scale)
         const newHeight = Math.round(vbHeight * scale)
-        return addRootSvgAttributes(svgContent, `width="${newWidth}" height="${newHeight}"`)
+        return addRootSvgAttributes(
+          svgContent,
+          `width="${newWidth}" height="${newHeight}"`
+        )
       }
     }
 
-    return addRootSvgAttributes(svgContent, `width="${minSize}" height="${minSize}"`)
+    return addRootSvgAttributes(
+      svgContent,
+      `width="${minSize}" height="${minSize}"`
+    )
   }
 
-  const widthMatch = svgOpenTag.match(/\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
-  const heightMatch = svgOpenTag.match(/\bheight\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
+  const widthMatch = svgOpenTag.match(
+    /\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/
+  )
+  const heightMatch = svgOpenTag.match(
+    /\bheight\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/
+  )
 
   if (!widthMatch || !heightMatch) {
     return svgContent
@@ -110,20 +137,28 @@ export function ensureMinimumSize (svgContent: string, minSize: number): string 
   const newHeight = Math.round(height * scale)
 
   return svgContent
-    .replace(/\bwidth\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `width="${newWidth}"`)
-    .replace(/\bheight\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `height="${newHeight}"`)
+    .replace(
+      /\bwidth\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/,
+      `width="${newWidth}"`
+    )
+    .replace(
+      /\bheight\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/,
+      `height="${newHeight}"`
+    )
 }
 
-function getAttribute (attrs: string, name: string): string | null {
+function getAttribute(attrs: string, name: string): string | null {
   const escapedName = escapeRegExp(name)
-  const match = attrs.match(new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
+  const match = attrs.match(
+    new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i')
+  )
   return match?.[2] ?? null
 }
 
-function addRootSvgAttributes (svgContent: string, attributes: string): string {
-  return svgContent.replace(/<svg\b/i, match => `${match} ${attributes}`)
+function addRootSvgAttributes(svgContent: string, attributes: string): string {
+  return svgContent.replace(/<svg\b/i, (match) => `${match} ${attributes}`)
 }
 
-function escapeRegExp (value: string): string {
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

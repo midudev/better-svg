@@ -16,6 +16,7 @@ If you discover a security vulnerability in Better SVG, please report it by:
 2. **GitHub**: Use the [private vulnerability reporting](https://github.com/midudev/better-svg/security/advisories/new) feature
 
 Please include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
@@ -26,6 +27,7 @@ We will respond within 48 hours and work on a fix as soon as possible.
 ## Security Measures
 
 This extension:
+
 - Does not collect or transmit user data
 - Does not make external network requests (except for SVGO optimization, which runs locally)
 - Uses VS Code's Content Security Policy for webviews

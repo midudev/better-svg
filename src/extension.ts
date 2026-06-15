@@ -18,7 +18,10 @@ import * as vscode from 'vscode'
 import { SvgPreviewProvider } from './svgEditorProvider'
 import { SvgGutterPreview, SvgHoverProvider } from './svgGutterPreview'
 import { optimize } from 'svgo/browser'
-import { prepareForOptimization, finalizeAfterOptimization } from './svgTransform'
+import {
+  prepareForOptimization,
+  finalizeAfterOptimization
+} from './svgTransform'
 import { SUPPORTED_LANGUAGES } from './consts'
 import { calculateSavings } from './utils'
 import { getSvgoPlugins, optimizeSvgDocument } from './svgOptimizationService'
@@ -26,10 +29,12 @@ import { getSvgoPlugins, optimizeSvgDocument } from './svgOptimizationService'
 let previewProvider: SvgPreviewProvider
 let gutterPreview: SvgGutterPreview
 
-export function activate (context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
   try {
     if (!context.extensionUri) {
-      vscode.window.showErrorMessage('Better SVG: Extension context.extensionUri is undefined!')
+      vscode.window.showErrorMessage(
+        'Better SVG: Extension context.extensionUri is undefined!'
+      )
       throw new Error('Extension context.extensionUri is undefined')
     }
 
@@ -59,7 +64,7 @@ export function activate (context: vscode.ExtensionContext) {
       vscode.languages.registerHoverProvider(
         SUPPORTED_LANGUAGES.map((language) => ({
           language,
-          scheme: 'file',
+          scheme: 'file'
         })),
         svgHoverProvider
       )
@@ -67,7 +72,7 @@ export function activate (context: vscode.ExtensionContext) {
 
     // Update decorations when active editor changes
     context.subscriptions.push(
-      vscode.window.onDidChangeActiveTextEditor(editor => {
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor) {
           gutterPreview.updateDecorations(editor)
         }
@@ -86,7 +91,7 @@ export function activate (context: vscode.ExtensionContext) {
     }
 
     context.subscriptions.push(
-      vscode.workspace.onDidChangeTextDocument(e => {
+      vscode.workspace.onDidChangeTextDocument((e) => {
         const editor = vscode.window.activeTextEditor
         if (editor && editor.document === e.document) {
           triggerUpdate(editor)
@@ -107,12 +112,20 @@ export function activate (context: vscode.ExtensionContext) {
     const updateContext = (editor: vscode.TextEditor | undefined) => {
       if (editor && editor.document.fileName.toLowerCase().endsWith('.svg')) {
         // Show the view
-        vscode.commands.executeCommand('setContext', 'betterSvg.hasSvgOpen', true)
+        vscode.commands.executeCommand(
+          'setContext',
+          'betterSvg.hasSvgOpen',
+          true
+        )
 
         const config = vscode.workspace.getConfiguration('betterSvg')
         const autoReveal = config.get<boolean>('autoReveal', true)
 
-        if (autoReveal && editor.document.uri.scheme === 'file' && previewProvider.isVisible) {
+        if (
+          autoReveal &&
+          editor.document.uri.scheme === 'file' &&
+          previewProvider.isVisible
+        ) {
           vscode.commands.executeCommand('betterSvg.preview.focus')
         }
 
@@ -125,7 +138,11 @@ export function activate (context: vscode.ExtensionContext) {
         const autoCollapse = config.get<boolean>('autoCollapse', true)
 
         if (autoCollapse) {
-          vscode.commands.executeCommand('setContext', 'betterSvg.hasSvgOpen', false)
+          vscode.commands.executeCommand(
+            'setContext',
+            'betterSvg.hasSvgOpen',
+            false
+          )
 
           if (previewProvider) {
             previewProvider.clearPreview()
@@ -136,19 +153,21 @@ export function activate (context: vscode.ExtensionContext) {
 
     // Auto-reveal panel when SVG file is opened
     context.subscriptions.push(
-      vscode.window.onDidChangeActiveTextEditor(editor => {
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
         updateContext(editor)
       })
     )
 
     // Update preview when document changes
     context.subscriptions.push(
-      vscode.workspace.onDidChangeTextDocument(e => {
+      vscode.workspace.onDidChangeTextDocument((e) => {
         const editor = vscode.window.activeTextEditor
-        if (editor &&
+        if (
+          editor &&
           editor.document === e.document &&
           editor.document.fileName.toLowerCase().endsWith('.svg') &&
-          previewProvider) {
+          previewProvider
+        ) {
           previewProvider.updatePreview(e.document)
         }
       })
@@ -156,7 +175,7 @@ export function activate (context: vscode.ExtensionContext) {
 
     // Collapse preview when SVG file is closed
     context.subscriptions.push(
-      vscode.workspace.onDidCloseTextDocument(document => {
+      vscode.workspace.onDidCloseTextDocument((document) => {
         if (document.fileName.toLowerCase().endsWith('.svg')) {
           const config = vscode.workspace.getConfiguration('betterSvg')
           const autoCollapse = config.get<boolean>('autoCollapse', true)
@@ -166,13 +185,17 @@ export function activate (context: vscode.ExtensionContext) {
           }
 
           // Check if there are any other SVG files still open
-          const hasOpenSvg = vscode.window.visibleTextEditors.some(
-            editor => editor.document.fileName.toLowerCase().endsWith('.svg')
+          const hasOpenSvg = vscode.window.visibleTextEditors.some((editor) =>
+            editor.document.fileName.toLowerCase().endsWith('.svg')
           )
 
           // If no SVG files are open, hide the view
           if (!hasOpenSvg) {
-            vscode.commands.executeCommand('setContext', 'betterSvg.hasSvgOpen', false)
+            vscode.commands.executeCommand(
+              'setContext',
+              'betterSvg.hasSvgOpen',
+              false
+            )
 
             if (previewProvider) {
               previewProvider.clearPreview()
@@ -191,45 +214,50 @@ export function activate (context: vscode.ExtensionContext) {
 
     // Register optimize command
     context.subscriptions.push(
-      vscode.commands.registerCommand('betterSvg.optimize', async (uri?: vscode.Uri) => {
-        let document: vscode.TextDocument | undefined
+      vscode.commands.registerCommand(
+        'betterSvg.optimize',
+        async (uri?: vscode.Uri) => {
+          let document: vscode.TextDocument | undefined
 
-        // If URI is provided (e.g. from context menu or title button), open that document
-        if (uri && uri instanceof vscode.Uri) {
-          try {
-            document = await vscode.workspace.openTextDocument(uri)
-            await vscode.window.showTextDocument(document)
-          } catch (error) {
-            vscode.window.showErrorMessage(`Failed to open document: ${error}`)
+          // If URI is provided (e.g. from context menu or title button), open that document
+          if (uri && uri instanceof vscode.Uri) {
+            try {
+              document = await vscode.workspace.openTextDocument(uri)
+              await vscode.window.showTextDocument(document)
+            } catch (error) {
+              vscode.window.showErrorMessage(
+                `Failed to open document: ${error}`
+              )
+              return
+            }
+          } else {
+            // Fallback to active text editor
+            const editor = vscode.window.activeTextEditor
+            if (editor) {
+              document = editor.document
+            }
+          }
+
+          if (!document) {
+            vscode.window.showErrorMessage('No active editor or file selected')
             return
           }
-        } else {
-          // Fallback to active text editor
-          const editor = vscode.window.activeTextEditor
-          if (editor) {
-            document = editor.document
+
+          if (!document.fileName.toLowerCase().endsWith('.svg')) {
+            vscode.window.showErrorMessage('Not an SVG file')
+            return
           }
-        }
 
-        if (!document) {
-          vscode.window.showErrorMessage('No active editor or file selected')
-          return
+          await optimizeSvgDocument(document)
         }
-
-        if (!document.fileName.toLowerCase().endsWith('.svg')) {
-          vscode.window.showErrorMessage('Not an SVG file')
-          return
-        }
-
-        await optimizeSvgDocument(document)
-      })
+      )
     )
 
     // Register optimize command from hover
     context.subscriptions.push(
       vscode.commands.registerCommand(
         'betterSvg.optimizeFromHover',
-        async (args?: { uri: string, start: number, length: number }) => {
+        async (args?: { uri: string; start: number; length: number }) => {
           if (!args || !args.uri) {
             vscode.window.showErrorMessage('No SVG metadata provided')
             return
@@ -256,7 +284,9 @@ export function activate (context: vscode.ExtensionContext) {
             const svgContent = document.getText(range)
             await optimizeSvgInline(document, svgContent, range)
           } catch (error) {
-            vscode.window.showErrorMessage(`No SVG found at cursor position (${error})`)
+            vscode.window.showErrorMessage(
+              `No SVG found at cursor position (${error})`
+            )
           }
         }
       )
@@ -264,18 +294,24 @@ export function activate (context: vscode.ExtensionContext) {
   } catch (error: any) {
     vscode.window.showErrorMessage(
       'Better SVG: Failed to activate extension!\n' +
-      `Error: ${error.message}\n` +
-      `Stack: ${error.stack?.substring(0, 200)}`
+        `Error: ${error.message}\n` +
+        `Stack: ${error.stack?.substring(0, 200)}`
     )
     throw error
   }
 }
 
-export async function optimizeSvgInline (document: vscode.TextDocument, svgContent: string, range: vscode.Range) {
+export async function optimizeSvgInline(
+  document: vscode.TextDocument,
+  svgContent: string,
+  range: vscode.Range
+) {
   try {
     const plugins = getSvgoPlugins(false)
     const options = {
-      useCamelCase: ['javascriptreact', 'typescriptreact'].includes(document.languageId)
+      useCamelCase: ['javascriptreact', 'typescriptreact'].includes(
+        document.languageId
+      )
     }
 
     // Prepare SVG for optimization (convert JSX to valid SVG if needed)
@@ -294,11 +330,8 @@ export async function optimizeSvgInline (document: vscode.TextDocument, svgConte
 
     await vscode.workspace.applyEdit(edit)
 
-    const {
-      originalSizeFormatted,
-      optimizedSizeFormatted,
-      savingPercent
-    } = calculateSavings(svgContent, finalSvg)
+    const { originalSizeFormatted, optimizedSizeFormatted, savingPercent } =
+      calculateSavings(svgContent, finalSvg)
 
     vscode.window.showInformationMessage(
       `SVG optimized. Reduced from ${originalSizeFormatted} to ${optimizedSizeFormatted} (${savingPercent}% saved)`
@@ -308,4 +341,4 @@ export async function optimizeSvgInline (document: vscode.TextDocument, svgConte
   }
 }
 
-export function deactivate () { }
+export function deactivate() {}

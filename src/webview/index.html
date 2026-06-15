@@ -13,71 +13,130 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}} 'unsafe-inline';"
+    />
+    <title>SVG Preview</title>
+    <link rel="stylesheet" href="{{stylesUri}}" />
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src {{cspSource}} 'unsafe-inline'; script-src {{cspSource}} 'unsafe-inline';">
-  <title>SVG Preview</title>
-  <link rel="stylesheet" href="{{stylesUri}}">
-</head>
-
-<body>
-  <div class="preview-wrapper">
-    <div class="preview-header">
-      <div class="preview-header-title">
-        <span id="zoomLevel" class="zoom-level">(Zoom 100%)</span>
-        <span id="svgSize" class="svg-size"></span>
+  <body>
+    <div class="preview-wrapper">
+      <div class="preview-header">
+        <div class="preview-header-title">
+          <span id="zoomLevel" class="zoom-level">(Zoom 100%)</span>
+          <span id="svgSize" class="svg-size"></span>
+        </div>
+        <div class="preview-header-controls">
+          <div
+            class="optimize-wrapper"
+            id="optimizeWrapper"
+            title="Optimize SVG"
+          >
+            <svg
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              class="optimize-icon"
+              viewBox="0 0 24 24"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" />
+              <path d="M13 3v7h6l-8 11v-7H5z" />
+            </svg>
+          </div>
+          <div
+            class="toggle-dark-bg-wrapper"
+            id="toggleDarkBgWrapper"
+            title="Toggle dark background"
+          >
+            <svg
+              id="toggleDarkBg"
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              class="toggle-dark-bg"
+              viewBox="0 0 24 24"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" />
+              <path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0" />
+              <path d="M12 17a5 5 0 0 0 0-10z" />
+            </svg>
+          </div>
+          <div
+            class="center-icon-wrapper"
+            id="centerIconWrapper"
+            title="Center SVG"
+          >
+            <svg
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              class="center-icon"
+              viewBox="0 0 24 24"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" />
+              <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
+              <path
+                d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6m0-6v2m0 14v2m-9-9h2m14 0h2"
+              />
+            </svg>
+          </div>
+          <div
+            class="color-picker-wrapper"
+            id="colorPickerWrapper"
+            title="Change currentColor value"
+          >
+            <svg
+              width="18"
+              height="18"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              class="color-picker-icon"
+              viewBox="0 0 24 24"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" />
+              <path
+                d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.582 9 8 0 1.06-.474 2.078-1.318 2.828S17.693 15 16.5 15H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21"
+              />
+              <path
+                d="M7.5 10.5a1 1 0 1 0 2 0 1 1 0 1 0-2 0m4-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m4 3a1 1 0 1 0 2 0 1 1 0 1 0-2 0"
+              />
+            </svg>
+            <div
+              class="color-picker-swatch"
+              id="colorSwatch"
+              style="background-color: {{defaultColor}};"
+            ></div>
+            <input type="color" id="colorPicker" value="{{defaultColor}}" />
+          </div>
+        </div>
       </div>
-      <div class="preview-header-controls">
-        <div class="optimize-wrapper" id="optimizeWrapper" title="Optimize SVG">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-            stroke-width="1.5" class="optimize-icon" viewBox="0 0 24 24">
-            <path stroke="none" d="M0 0h24v24H0z" />
-            <path d="M13 3v7h6l-8 11v-7H5z" />
-          </svg>
-        </div>
-        <div class="toggle-dark-bg-wrapper" id="toggleDarkBgWrapper" title="Toggle dark background">
-          <svg id="toggleDarkBg" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round"
-            stroke-linejoin="round" stroke-width="1.5" class="toggle-dark-bg" viewBox="0 0 24 24">
-            <path stroke="none" d="M0 0h24v24H0z" />
-            <path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0" />
-            <path d="M12 17a5 5 0 0 0 0-10z" />
-          </svg>
-        </div>
-        <div class="center-icon-wrapper" id="centerIconWrapper" title="Center SVG">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-            stroke-width="1.5" class="center-icon" viewBox="0 0 24 24">
-            <path stroke="none" d="M0 0h24v24H0z" />
-            <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
-            <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6m0-6v2m0 14v2m-9-9h2m14 0h2" />
-          </svg>
-        </div>
-        <div class="color-picker-wrapper" id="colorPickerWrapper" title="Change currentColor value">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
-            stroke-width="1.5" class="color-picker-icon" viewBox="0 0 24 24">
-            <path stroke="none" d="M0 0h24v24H0z" />
-            <path
-              d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.582 9 8 0 1.06-.474 2.078-1.318 2.828S17.693 15 16.5 15H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21" />
-            <path
-              d="M7.5 10.5a1 1 0 1 0 2 0 1 1 0 1 0-2 0m4-3a1 1 0 1 0 2 0 1 1 0 1 0-2 0m4 3a1 1 0 1 0 2 0 1 1 0 1 0-2 0" />
-          </svg>
-          <div class="color-picker-swatch" id="colorSwatch" style="background-color: {{defaultColor}};"></div>
-          <input type="color" id="colorPicker" value="{{defaultColor}}">
-        </div>
+      <div class="preview-content" id="preview">
+        <div class="preview-svg-wrapper" id="svgWrapper">{{svgContent}}</div>
       </div>
     </div>
-    <div class="preview-content" id="preview">
-      <div class="preview-svg-wrapper" id="svgWrapper">
-        {{svgContent}}
-      </div>
-    </div>
-  </div>
 
-  <script src="{{scriptUri}}"></script>
-</body>
-
+    <script src="{{scriptUri}}"></script>
+  </body>
 </html>
