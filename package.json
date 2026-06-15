@@ -193,6 +193,7 @@
     "test": "node --import tsx --test src/*.test.ts",
     "test:vscode": "vscode-test",
     "lint": "eslint src",
+    "debug-svg": "node src/debug_svgo.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -1,3 +1,9 @@
+/**
+ * Debug utility for experimenting with SVGO optimizations.
+ * Not used in production build.
+ * Can be executed via: pnpm debug-svg
+ */
+
 const { optimize } = require('svgo')
 
 const svgContent =

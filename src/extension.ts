@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
     previewProvider = new SvgPreviewProvider(context)
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(
-        'betterSvg.preview',
+        SvgPreviewProvider.viewType,
         previewProvider,
         { webviewOptions: { retainContextWhenHidden: true } }
       )
