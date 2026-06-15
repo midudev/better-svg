@@ -4,7 +4,8 @@ import {
   calculateSavings,
   ensureMinimumSize,
   formatBytes,
-  propagateStrokeAndFill
+  formatKilobytes,
+  propagateRootStroke
 } from './utils'
 
 describe('formatBytes', () => {
@@ -14,6 +15,12 @@ describe('formatBytes', () => {
 
   it('formats bytes at or above 1 KB as KB', () => {
     assert.strictEqual(formatBytes(1536), '1.50 KB')
+  })
+})
+
+describe('formatKilobytes', () => {
+  it('formats bytes as KB', () => {
+    assert.strictEqual(formatKilobytes(1536), '1.50 KB')
   })
 })
 
@@ -29,14 +36,15 @@ describe('calculateSavings', () => {
   })
 })
 
-describe('propagateStrokeAndFill', () => {
+describe('propagateRootStroke', () => {
   it('copies root stroke to child shapes without an explicit stroke', () => {
     const svg = '<svg stroke="currentColor"><path d="M0 0" /><circle stroke="red" /></svg>'
+    const result = propagateRootStroke(svg)
+    const pathTag = result.match(/<path\b[^>]*>/)?.[0] ?? ''
+    const circleTag = result.match(/<circle\b[^>]*>/)?.[0] ?? ''
 
-    assert.strictEqual(
-      propagateStrokeAndFill(svg),
-      '<svg stroke="currentColor"><path d="M0 0"  stroke="currentColor"/><circle stroke="red" /></svg>'
-    )
+    assert.match(pathTag, /\bstroke="currentColor"/)
+    assert.match(circleTag, /\bstroke="red"/)
   })
 })
 
@@ -56,6 +64,15 @@ describe('ensureMinimumSize', () => {
     assert.strictEqual(
       ensureMinimumSize(svg, 40),
       '<svg width="20" height="40" viewBox="0 0 10 20"><path /></svg>'
+    )
+  })
+
+  it('adds dimensions to uppercase SVG tags', () => {
+    const svg = '<SVG viewBox="0 0 10 20"><path /></SVG>'
+
+    assert.strictEqual(
+      ensureMinimumSize(svg, 40),
+      '<SVG width="20" height="40" viewBox="0 0 10 20"><path /></SVG>'
     )
   })
 

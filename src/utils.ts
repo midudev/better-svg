@@ -22,6 +22,10 @@ export function formatBytes (bytes: number): string {
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
+export function formatKilobytes (bytes: number): string {
+  return `${(bytes / 1024).toFixed(2)} KB`
+}
+
 /**
  * Calculates savings between original and optimized content
  */
@@ -39,7 +43,7 @@ export function calculateSavings (originalContent: string, optimizedContent: str
   }
 }
 
-export function propagateStrokeAndFill (svgContent: string): string {
+export function propagateRootStroke (svgContent: string): string {
   const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
   if (!svgOpenTagMatch) return svgContent
 
@@ -80,11 +84,11 @@ export function ensureMinimumSize (svgContent: string, minSize: number): string 
         const scale = minSize / Math.max(vbWidth, vbHeight)
         const newWidth = Math.round(vbWidth * scale)
         const newHeight = Math.round(vbHeight * scale)
-        return svgContent.replace('<svg', `<svg width="${newWidth}" height="${newHeight}"`)
+        return addRootSvgAttributes(svgContent, `width="${newWidth}" height="${newHeight}"`)
       }
     }
 
-    return svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
+    return addRootSvgAttributes(svgContent, `width="${minSize}" height="${minSize}"`)
   }
 
   const widthMatch = svgOpenTag.match(/\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
@@ -114,6 +118,10 @@ function getAttribute (attrs: string, name: string): string | null {
   const escapedName = escapeRegExp(name)
   const match = attrs.match(new RegExp(`\\b${escapedName}\\s*=\\s*(["'])(.*?)\\1`, 'i'))
   return match?.[2] ?? null
+}
+
+function addRootSvgAttributes (svgContent: string, attributes: string): string {
+  return svgContent.replace(/<svg\b/i, match => `${match} ${attributes}`)
 }
 
 function escapeRegExp (value: string): string {

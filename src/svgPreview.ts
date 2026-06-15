@@ -17,7 +17,7 @@
 import { convertJsxToSvg, type OptimizationOptions } from './svgTransform'
 import {
   ensureMinimumSize,
-  propagateStrokeAndFill
+  propagateRootStroke
 } from './utils'
 
 export type SvgPreviewKind = 'svg' | 'symbol' | 'use'
@@ -183,7 +183,7 @@ function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbo
 function preparePreviewSvg (svgContent: string, options: SvgPreviewOptions): string | null {
   let previewSvg = ensureXmlns(svgContent)
   previewSvg = previewSvg.replace(/currentColor/g, options.contrastColor)
-  previewSvg = propagateStrokeAndFill(previewSvg)
+  previewSvg = propagateRootStroke(previewSvg)
   previewSvg = ensureMinimumSize(previewSvg, options.minSize)
 
   const validationContent = previewSvg.replace(/<style[\s\S]*?<\/style>/gi, '')
