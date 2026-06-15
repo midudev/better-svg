@@ -170,7 +170,12 @@ function resolveUseReferences (svgContent: string, symbols: Map<string, SvgSymbo
     .filter((source): source is string => Boolean(source))
     .join('')
 
-  let resolvedSvg = ensureRootViewBox(svgContent, symbols.get(uniqueReferenceIds[0]))
+  const firstReferenceId = uniqueReferenceIds[0]
+  if (!firstReferenceId) {
+    return svgContent
+  }
+
+  let resolvedSvg = ensureRootViewBox(svgContent, symbols.get(firstReferenceId))
   resolvedSvg = resolvedSvg.replace(/<svg\b[^>]*>/i, match => `${match}<defs>${defs}</defs>`)
 
   return resolvedSvg
@@ -237,8 +242,8 @@ function ensureMinimumSize (svgContent: string, minSize: number): string {
     if (viewBox) {
       const viewBoxParts = viewBox.split(/\s+/)
       if (viewBoxParts.length >= 4) {
-        const vbWidth = parseFloat(viewBoxParts[2])
-        const vbHeight = parseFloat(viewBoxParts[3])
+        const vbWidth = parseFloat(viewBoxParts[2] ?? '0')
+        const vbHeight = parseFloat(viewBoxParts[3] ?? '0')
         const scale = minSize / Math.max(vbWidth, vbHeight)
         const newWidth = Math.round(vbWidth * scale)
         const newHeight = Math.round(vbHeight * scale)
@@ -256,8 +261,8 @@ function ensureMinimumSize (svgContent: string, minSize: number): string {
     return svgContent
   }
 
-  const width = parseFloat(widthMatch[1])
-  const height = parseFloat(heightMatch[1])
+  const width = parseFloat(widthMatch[1] ?? '0')
+  const height = parseFloat(heightMatch[1] ?? '0')
 
   if (width >= minSize || height >= minSize) {
     return svgContent
