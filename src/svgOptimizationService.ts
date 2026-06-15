@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import { optimize } from 'svgo/browser'
-import { calculateSavings } from './utils'
 
 export function getSvgoPlugins (removeClasses: boolean): any[] {
   const plugins: any[] = [
@@ -53,14 +52,15 @@ export async function optimizeSvgDocument (document: vscode.TextDocument) {
 
     await vscode.workspace.applyEdit(edit)
 
-    const {
-      originalSizeFormatted,
-      optimizedSizeFormatted,
-      savingPercent
-    } = calculateSavings(svgContent, result.data)
+    // Calculate savings
+    const originalSize = Buffer.byteLength(svgContent, 'utf8')
+    const optimizedSize = Buffer.byteLength(result.data, 'utf8')
+    const savingPercent = ((originalSize - optimizedSize) / originalSize * 100).toFixed(2)
+    const originalSizeKB = (originalSize / 1024).toFixed(2)
+    const optimizedSizeKB = (optimizedSize / 1024).toFixed(2)
 
     vscode.window.showInformationMessage(
-      `SVG optimized. Reduced from ${originalSizeFormatted} to ${optimizedSizeFormatted} (${savingPercent}% saved)`
+      `SVG optimized. Reduced from ${originalSizeKB} KB to ${optimizedSizeKB} KB (${savingPercent}% saved)`
     )
   } catch (error) {
     vscode.window.showErrorMessage(`Failed to optimize SVG: ${error}`)

@@ -2,8 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import {
   calculateSavings,
-  ensureMinimumSizeGutter,
-  ensureMinimumSizeHover,
+  ensureMinimumSize,
   formatBytes,
   propagateStrokeAndFill
 } from './utils'
@@ -41,12 +40,12 @@ describe('propagateStrokeAndFill', () => {
   })
 })
 
-describe('ensureMinimumSizeHover', () => {
-  it('scales explicit small dimensions for hover previews', () => {
+describe('ensureMinimumSize', () => {
+  it('scales explicit small dimensions', () => {
     const svg = '<svg width="12" height="6"><path /></svg>'
 
     assert.strictEqual(
-      ensureMinimumSizeHover(svg, 24),
+      ensureMinimumSize(svg, 24),
       '<svg width="24" height="12"><path /></svg>'
     )
   })
@@ -55,16 +54,14 @@ describe('ensureMinimumSizeHover', () => {
     const svg = '<svg viewBox="0 0 10 20"><path /></svg>'
 
     assert.strictEqual(
-      ensureMinimumSizeHover(svg, 40),
+      ensureMinimumSize(svg, 40),
       '<svg width="20" height="40" viewBox="0 0 10 20"><path /></svg>'
     )
   })
-})
 
-describe('ensureMinimumSizeGutter', () => {
-  it('does not scale existing explicit dimensions', () => {
-    const svg = '<svg width="12" height="6"><path /></svg>'
+  it('keeps dimensions when either side is already large enough', () => {
+    const svg = '<svg width="24" height="12"><path /></svg>'
 
-    assert.strictEqual(ensureMinimumSizeGutter(svg, 24), svg)
+    assert.strictEqual(ensureMinimumSize(svg, 24), svg)
   })
 })

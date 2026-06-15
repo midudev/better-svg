@@ -15,6 +15,10 @@
  */
 
 import { convertJsxToSvg, type OptimizationOptions } from './svgTransform'
+import {
+  ensureMinimumSize,
+  propagateStrokeAndFill
+} from './utils'
 
 export type SvgPreviewKind = 'svg' | 'symbol' | 'use'
 
@@ -199,77 +203,6 @@ function ensureXmlns (svgContent: string): string {
   }
 
   return svgContent.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"')
-}
-
-function propagateStrokeAndFill (svgContent: string): string {
-  const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-  if (!svgOpenTagMatch) return svgContent
-
-  const svgOpenTag = svgOpenTagMatch[0]
-  const stroke = getAttribute(svgOpenTag, 'stroke')
-
-  if (!stroke) {
-    return svgContent
-  }
-
-  const shapeElements = ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'rect']
-  const shapeRegex = new RegExp(`<(${shapeElements.join('|')})([^>]*?)(\\/?>)`, 'gi')
-
-  return svgContent.replace(shapeRegex, (match, tagName, attrs, ending) => {
-    if (attrs && /\bstroke\s*=/.test(attrs)) {
-      return match
-    }
-
-    return `<${tagName}${attrs || ''} stroke="${stroke}"${ending}`
-  })
-}
-
-function ensureMinimumSize (svgContent: string, minSize: number): string {
-  const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-  if (!svgOpenTagMatch) return svgContent
-
-  const svgOpenTag = svgOpenTagMatch[0]
-  const hasWidth = /\bwidth\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-  const hasHeight = /\bheight\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-  const viewBox = getAttribute(svgOpenTag, 'viewBox')
-
-  if (!hasWidth && !hasHeight) {
-    if (viewBox) {
-      const viewBoxParts = viewBox.split(/\s+/)
-      if (viewBoxParts.length >= 4) {
-        const vbWidth = parseFloat(viewBoxParts[2])
-        const vbHeight = parseFloat(viewBoxParts[3])
-        const scale = minSize / Math.max(vbWidth, vbHeight)
-        const newWidth = Math.round(vbWidth * scale)
-        const newHeight = Math.round(vbHeight * scale)
-        return svgContent.replace('<svg', `<svg width="${newWidth}" height="${newHeight}"`)
-      }
-    }
-
-    return svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
-  }
-
-  const widthMatch = svgOpenTag.match(/\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
-  const heightMatch = svgOpenTag.match(/\bheight\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
-
-  if (!widthMatch || !heightMatch) {
-    return svgContent
-  }
-
-  const width = parseFloat(widthMatch[1])
-  const height = parseFloat(heightMatch[1])
-
-  if (width >= minSize || height >= minSize) {
-    return svgContent
-  }
-
-  const scale = minSize / Math.max(width, height)
-  const newWidth = Math.round(width * scale)
-  const newHeight = Math.round(height * scale)
-
-  return svgContent
-    .replace(/\bwidth\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `width="${newWidth}"`)
-    .replace(/\bheight\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `height="${newHeight}"`)
 }
 
 function ensureRootViewBox (svgContent: string, symbol: SvgSymbolDefinition | undefined): string {
