@@ -1,7 +1,7 @@
 /**
  * Debug utility for experimenting with SVGO optimizations.
  * Not used in production build.
- * Can be executed via: npm run debug-svg
+ * Can be executed via: pnpm debug-svg
  */
 
 const { optimize } = require('svgo')
@@ -17,23 +17,23 @@ const plugins = [
     params: {
       overrides: {
         cleanupIds: false,
-        removeUnknownsAndDefaults: removeClasses,
-      },
-    },
+        removeUnknownsAndDefaults: removeClasses
+      }
+    }
   },
   'removeDoctype',
   'removeComments',
   {
     name: 'removeAttrs',
     params: {
-      attrs: ['xmlns:xlink', 'xml:space', ...(removeClasses ? ['class'] : [])],
-    },
-  },
+      attrs: ['xmlns:xlink', 'xml:space', ...(removeClasses ? ['class'] : [])]
+    }
+  }
 ]
 
 const result = optimize(svgContent, {
   multipass: true,
-  plugins,
+  plugins
 })
 
 console.log('Original:', svgContent)

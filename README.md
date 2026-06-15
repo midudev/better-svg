@@ -64,6 +64,7 @@ Better SVG isn't just for `.svg` files. It understands SVG syntax inside a wide 
 - **Vue**: `.vue`
 - **Astro**: `.astro`
 - **Svelte**: `.svelte`
+- **Laravel Blade**: `.blade.php`
 
 The extension automatically detects SVG tags within these files, providing gutter icons, hover previews, and framework-aware optimization.
 

@@ -5,6 +5,7 @@ All notable changes to the "Better SVG" extension will be documented in this fil
 ## [0.1.0] - 2025-10-20
 
 ### Added
+
 - Initial release
 - Live SVG preview panel in Explorer sidebar
 - Color picker for `currentColor` customization
@@ -17,6 +18,7 @@ All notable changes to the "Better SVG" extension will be documented in this fil
 - Bundled with esbuild for fast loading
 
 ### Features
+
 - ✨ **Live Preview**: Real-time SVG preview in Explorer sidebar
 - 🎨 **Color Control**: Change `currentColor` value dynamically
 - 🌓 **Dark Mode**: Toggle dark background for light-colored SVGs

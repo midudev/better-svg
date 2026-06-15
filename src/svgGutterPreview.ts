@@ -15,7 +15,13 @@
  */
 
 import * as vscode from 'vscode'
-import { convertJsxToSvg } from './svgTransform'
+import {
+  collectSvgPreviewCandidates,
+  findSvgPreviewAtOffset,
+  svgToDataUri,
+  type SvgPreviewOptions
+} from './svgPreview'
+import { formatBytes } from './utils'
 
 interface SvgCacheEntry {
   dataUri: string
@@ -29,11 +35,26 @@ interface HoverCommandArgs {
   length: number
 }
 
+function getPreviewOptions(
+  languageId: string,
+  minSize: number
+): SvgPreviewOptions {
+  const isDarkTheme =
+    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
+    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
+
+  return {
+    useCamelCase: ['javascriptreact', 'typescriptreact'].includes(languageId),
+    contrastColor: isDarkTheme ? '#ffffff' : '#000000',
+    minSize
+  }
+}
+
 export class SvgHoverProvider implements vscode.HoverProvider {
   private cache: Map<string, SvgCacheEntry> = new Map()
   private cacheMaxAge = 5000 // 5 seconds
 
-  public provideHover (
+  public provideHover(
     document: vscode.TextDocument,
     position: vscode.Position
   ): vscode.Hover | null {
@@ -45,114 +66,75 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     }
 
     const text = document.getText()
-    const svgRegex = /<svg[\s\S]*?>[\s\S]*?<\/svg>/g
-    let match
+    const offset = document.offsetAt(position)
+    const candidate = findSvgPreviewAtOffset(
+      text,
+      offset,
+      getPreviewOptions(document.languageId, 128)
+    )
 
-    while ((match = svgRegex.exec(text))) {
-      const startPos = document.positionAt(match.index)
-      const endPos = document.positionAt(match.index + match[0].length)
-      const range = new vscode.Range(startPos, endPos)
-
-      if (range.contains(position)) {
-        const originalSvg = match[0]
-        const sizeBytes = Buffer.byteLength(originalSvg, 'utf8')
-
-        // Check cache
-        const cacheKey = `${document.uri.toString()}:${match.index}:${originalSvg.length}`
-        const cached = this.cache.get(cacheKey)
-        const now = Date.now()
-
-        if (cached && (now - cached.timestamp) < this.cacheMaxAge) {
-          return this.createHoverFromCache(cached, range, document)
-        }
-
-        let svgContent = originalSvg
-        const options = {
-          useCamelCase: ['javascriptreact', 'typescriptreact'].includes(document.languageId)
-        }
-
-        // Convert JSX syntax to valid SVG
-        svgContent = convertJsxToSvg(svgContent, options)
-
-        // Add xmlns if missing (do this early so SVG is valid)
-        // Check ONLY inside the opening <svg ... > tag
-        const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-        const hasXmlnsInRoot = svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
-        
-        if (!hasXmlnsInRoot) {
-          svgContent = svgContent.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
-        }
-
-        // Replace currentColor based on theme
-        const isDarkTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
-                            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
-        const contrastColor = isDarkTheme ? '#ffffff' : '#000000'
-        svgContent = svgContent.replace(/currentColor/g, contrastColor)
-
-        // Extract stroke/fill from parent SVG and propagate to children
-        svgContent = this.propagateStrokeAndFill(svgContent)
-
-        // Ensure minimum size for visibility in hover
-        svgContent = this.ensureMinimumSize(svgContent, 128)
-
-        // Validate that the SVG is likely to be renderable. 
-        // If it still contains JSX-like braces (outside of <style> tags), 
-        // it's likely to show a broken image, so we'd rather show nothing.
-        const validationContent = svgContent.replace(/<style[\s\S]*?<\/style>/gi, '')
-        if (validationContent.includes('{') || validationContent.includes('}')) {
-          return null
-        }
-
-        // Encode SVG for data URI - use base64 for better compatibility
-        const base64Svg = Buffer.from(svgContent).toString('base64')
-        const dataUri = `data:image/svg+xml;base64,${base64Svg}`
-
-        // Update cache
-        this.cache.set(cacheKey, { dataUri, sizeBytes, timestamp: now })
-
-        const commandArgs = this.buildHoverCommandArgs(document, range)
-        return this.createHover(dataUri, sizeBytes, range, commandArgs)
-      }
+    if (!candidate) {
+      return null
     }
 
-    return null
+    const startPos = document.positionAt(candidate.startIndex)
+    const endPos = document.positionAt(candidate.startIndex + candidate.length)
+    const range = new vscode.Range(startPos, endPos)
+    const sizeBytes = Buffer.byteLength(candidate.source, 'utf8')
+    const cacheKey = `${document.uri.toString()}:${candidate.kind}:${candidate.startIndex}:${candidate.length}:${candidate.previewSvg.length}`
+    const cached = this.cache.get(cacheKey)
+    const now = Date.now()
+    const commandArgs =
+      candidate.kind === 'svg'
+        ? this.buildHoverCommandArgs(document, range)
+        : null
+
+    if (cached && now - cached.timestamp < this.cacheMaxAge) {
+      return this.createHoverFromCache(cached, range, commandArgs)
+    }
+
+    const dataUri = svgToDataUri(candidate.previewSvg)
+    this.cache.set(cacheKey, { dataUri, sizeBytes, timestamp: now })
+
+    return this.createHover(dataUri, sizeBytes, range, commandArgs)
   }
 
-  private createHover (
+  private createHover(
     dataUri: string,
     sizeBytes: number,
     range: vscode.Range,
-    commandArgs: HoverCommandArgs
+    commandArgs: HoverCommandArgs | null
   ): vscode.Hover {
     const markdown = new vscode.MarkdownString()
     markdown.isTrusted = true
     markdown.supportHtml = true
     markdown.appendMarkdown(`![SVG Preview](${dataUri})\n\n`)
-    markdown.appendMarkdown(`**Size:** ${this.formatBytes(sizeBytes)}\n\n`)
-    const encodedArgs = encodeURIComponent(JSON.stringify(commandArgs))
-    markdown.appendMarkdown(`[⚡ Optimizar SVG](command:betterSvg.optimizeFromHover?${encodedArgs})`)
+    markdown.appendMarkdown(`**Size:** ${formatBytes(sizeBytes)}\n\n`)
+
+    if (commandArgs) {
+      const encodedArgs = encodeURIComponent(JSON.stringify(commandArgs))
+      markdown.appendMarkdown(
+        `[⚡ Optimizar SVG](command:betterSvg.optimizeFromHover?${encodedArgs})`
+      )
+    }
 
     return new vscode.Hover(markdown, range)
   }
 
-  private createHoverFromCache (
+  private createHoverFromCache(
     cached: SvgCacheEntry,
     range: vscode.Range,
-    document: vscode.TextDocument
+    commandArgs: HoverCommandArgs | null
   ): vscode.Hover {
-    const commandArgs = this.buildHoverCommandArgs(document, range)
-    return this.createHover(cached.dataUri, cached.sizeBytes, range, commandArgs)
+    return this.createHover(
+      cached.dataUri,
+      cached.sizeBytes,
+      range,
+      commandArgs
+    )
   }
 
-  private formatBytes (bytes: number): string {
-    if (bytes < 1024) {
-      return `${bytes} bytes`
-    }
-    const kb = bytes / 1024
-    return `${kb.toFixed(2)} KB`
-  }
-
-  private buildHoverCommandArgs (
+  private buildHoverCommandArgs(
     document: vscode.TextDocument,
     range: vscode.Range
   ): HoverCommandArgs {
@@ -165,97 +147,16 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     }
   }
 
-  private propagateStrokeAndFill (svgContent: string): string {
-    // Extract stroke and fill from the root <svg> element
-    const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-    if (!svgOpenTagMatch) return svgContent
-
-    const svgOpenTag = svgOpenTagMatch[0]
-
-    // Extract stroke attribute from svg tag
-    const strokeMatch = svgOpenTag.match(/\bstroke\s*=\s*["']([^"']+)["']/)
-    const stroke = strokeMatch ? strokeMatch[1] : null
-
-    // If there's a stroke on the parent, propagate it to child elements that don't have one
-    if (stroke) {
-      const shapeElements = ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'rect']
-      const shapeRegex = new RegExp(`<(${shapeElements.join('|')})([^>]*?)(\\/?>)`, 'gi')
-
-      svgContent = svgContent.replace(shapeRegex, (match, tagName, attrs, ending) => {
-        // Check if stroke is already present in attrs
-        if (attrs && /\bstroke\s*=/.test(attrs)) {
-          return match
-        }
-        return `<${tagName}${attrs || ''} stroke="${stroke}"${ending}`
-      })
-    }
-
-    return svgContent
-  }
-
-  private ensureMinimumSize (svgContent: string, minSize: number): string {
-    // Check if SVG has width/height attributes (only in svg tag, not child elements)
-    const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-    if (!svgOpenTagMatch) return svgContent
-
-    const svgOpenTag = svgOpenTagMatch[0]
-    const hasWidth = /\bwidth\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-    const hasHeight = /\bheight\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-
-    // Try to get dimensions from viewBox if no explicit width/height
-    const viewBoxMatch = svgOpenTag.match(/viewBox\s*=\s*["']([^"']+)["']/)
-
-    if (!hasWidth && !hasHeight) {
-      if (viewBoxMatch) {
-        // Use viewBox dimensions scaled to minSize
-        const viewBoxParts = viewBoxMatch[1].split(/\s+/)
-        if (viewBoxParts.length >= 4) {
-          const vbWidth = parseFloat(viewBoxParts[2])
-          const vbHeight = parseFloat(viewBoxParts[3])
-          const scale = minSize / Math.max(vbWidth, vbHeight)
-          const newWidth = Math.round(vbWidth * scale)
-          const newHeight = Math.round(vbHeight * scale)
-          svgContent = svgContent.replace('<svg', `<svg width="${newWidth}" height="${newHeight}"`)
-        } else {
-          svgContent = svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
-        }
-      } else {
-        // No viewBox either, add default size
-        svgContent = svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
-      }
-    } else {
-      // Scale up small SVGs
-      const widthMatch = svgOpenTag.match(/\bwidth\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
-      const heightMatch = svgOpenTag.match(/\bheight\s*=\s*["'](\d+(?:\.\d+)?)(?:px)?["']/)
-
-      if (widthMatch && heightMatch) {
-        const width = parseFloat(widthMatch[1])
-        const height = parseFloat(heightMatch[1])
-
-        if (width < minSize && height < minSize) {
-          const scale = minSize / Math.max(width, height)
-          const newWidth = Math.round(width * scale)
-          const newHeight = Math.round(height * scale)
-
-          svgContent = svgContent
-            .replace(/\bwidth\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `width="${newWidth}"`)
-            .replace(/\bheight\s*=\s*["']\d+(?:\.\d+)?(?:px)?["']/, `height="${newHeight}"`)
-        }
-      }
-    }
-
-    return svgContent
-  }
-
-  public clearCache (): void {
+  public clearCache(): void {
     this.cache.clear()
   }
 }
 
 export class SvgGutterPreview {
-  private decorationTypes: Map<string, vscode.TextEditorDecorationType[]> = new Map()
+  private decorationTypes: Map<string, vscode.TextEditorDecorationType[]> =
+    new Map()
 
-  public updateDecorations (editor: vscode.TextEditor) {
+  public updateDecorations(editor: vscode.TextEditor) {
     if (!editor) {
       return
     }
@@ -273,55 +174,17 @@ export class SvgGutterPreview {
     }
 
     const text = editor.document.getText()
-    const svgRegex = /<svg[\s\S]*?>[\s\S]*?<\/svg>/g
+    const candidates = collectSvgPreviewCandidates(
+      text,
+      getPreviewOptions(editor.document.languageId, 16)
+    )
     const newDecorationTypes: vscode.TextEditorDecorationType[] = []
 
-    let match
-    while ((match = svgRegex.exec(text))) {
-      const startPos = editor.document.positionAt(match.index)
+    for (const candidate of candidates) {
+      const startPos = editor.document.positionAt(candidate.startIndex)
       // Use a zero-length range at the start of the SVG to ensure only one gutter icon is shown
       const range = new vscode.Range(startPos, startPos)
-
-      let svgContent = match[0]
-      const options = {
-        useCamelCase: ['javascriptreact', 'typescriptreact'].includes(editor.document.languageId)
-      }
-
-      // Convert JSX syntax to valid SVG
-      svgContent = convertJsxToSvg(svgContent, options)
-
-      // Add xmlns if missing (do this early so SVG is valid)
-      // Check ONLY inside the opening <svg ... > tag
-      const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-      const hasXmlnsInRoot = svgOpenTagMatch && /xmlns\s*=\s*["']/.test(svgOpenTagMatch[0])
-      
-      if (!hasXmlnsInRoot) {
-        svgContent = svgContent.replace(/<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
-      }
-
-      // Replace currentColor based on theme
-      const isDarkTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ||
-                          vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast
-
-      const contrastColor = isDarkTheme ? '#ffffff' : '#000000'
-
-      svgContent = svgContent.replace(/currentColor/g, contrastColor)
-
-      // Propagate stroke/fill from parent to children (after currentColor is resolved)
-      svgContent = this.propagateStrokeAndFill(svgContent)
-
-      // Ensure minimum size for gutter icon
-      svgContent = this.ensureMinimumSize(svgContent, 16)
-
-      // Validate that the SVG is likely to be renderable.
-      const validationContent = svgContent.replace(/<style[\s\S]*?<\/style>/gi, '')
-      if (validationContent.includes('{') || validationContent.includes('}')) {
-        continue
-      }
-
-      // Encode SVG content for data URI - use base64 for better compatibility
-      const base64Svg = Buffer.from(svgContent).toString('base64')
-      const dataUri = `data:image/svg+xml;base64,${base64Svg}`
+      const dataUri = svgToDataUri(candidate.previewSvg)
 
       const decorationType = vscode.window.createTextEditorDecorationType({
         gutterIconPath: vscode.Uri.parse(dataUri),
@@ -336,77 +199,16 @@ export class SvgGutterPreview {
     this.decorationTypes.set(docUri, newDecorationTypes)
   }
 
-  private disposeDecorationsForUri (uri: string) {
+  private disposeDecorationsForUri(uri: string) {
     const types = this.decorationTypes.get(uri)
     if (types) {
-      types.forEach(t => t.dispose())
+      types.forEach((t) => t.dispose())
       this.decorationTypes.delete(uri)
     }
   }
 
-  private propagateStrokeAndFill (svgContent: string): string {
-    // Extract stroke and fill from the root <svg> element
-    const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-    if (!svgOpenTagMatch) return svgContent
-
-    const svgOpenTag = svgOpenTagMatch[0]
-
-    // Extract stroke attribute from svg tag
-    const strokeMatch = svgOpenTag.match(/\bstroke\s*=\s*["']([^"']+)["']/)
-    const stroke = strokeMatch ? strokeMatch[1] : null
-
-    // If there's a stroke on the parent, propagate it to child elements that don't have one
-    if (stroke) {
-      const shapeElements = ['path', 'line', 'polyline', 'polygon', 'circle', 'ellipse', 'rect']
-      const shapeRegex = new RegExp(`<(${shapeElements.join('|')})([^>]*?)(\\/?>)`, 'gi')
-
-      svgContent = svgContent.replace(shapeRegex, (match, tagName, attrs, ending) => {
-        // Check if stroke is already present in attrs
-        if (attrs && /\bstroke\s*=/.test(attrs)) {
-          return match
-        }
-        return `<${tagName}${attrs || ''} stroke="${stroke}"${ending}`
-      })
-    }
-
-    return svgContent
-  }
-
-  private ensureMinimumSize (svgContent: string, minSize: number): string {
-    // Check if SVG has width/height attributes (only in svg tag, not child elements)
-    const svgOpenTagMatch = svgContent.match(/<svg[^>]*>/i)
-    if (!svgOpenTagMatch) return svgContent
-
-    const svgOpenTag = svgOpenTagMatch[0]
-    const hasWidth = /\bwidth\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-    const hasHeight = /\bheight\s*=\s*["'][^"']+["']/.test(svgOpenTag)
-
-    // Try to get dimensions from viewBox if no explicit width/height
-    const viewBoxMatch = svgOpenTag.match(/viewBox\s*=\s*["']([^"']+)["']/)
-
-    if (!hasWidth && !hasHeight) {
-      if (viewBoxMatch) {
-        const viewBoxParts = viewBoxMatch[1].split(/\s+/)
-        if (viewBoxParts.length >= 4) {
-          const vbWidth = parseFloat(viewBoxParts[2])
-          const vbHeight = parseFloat(viewBoxParts[3])
-          const scale = minSize / Math.max(vbWidth, vbHeight)
-          const newWidth = Math.round(vbWidth * scale)
-          const newHeight = Math.round(vbHeight * scale)
-          svgContent = svgContent.replace('<svg', `<svg width="${newWidth}" height="${newHeight}"`)
-        } else {
-          svgContent = svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
-        }
-      } else {
-        svgContent = svgContent.replace('<svg', `<svg width="${minSize}" height="${minSize}"`)
-      }
-    }
-
-    return svgContent
-  }
-
-  public dispose () {
-    this.decorationTypes.forEach(types => types.forEach(t => t.dispose()))
+  public dispose() {
+    this.decorationTypes.forEach((types) => types.forEach((t) => t.dispose()))
     this.decorationTypes.clear()
   }
 }

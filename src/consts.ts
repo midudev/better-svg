@@ -16,6 +16,8 @@
 
 export const SUPPORTED_LANGUAGES = [
   'astro',
+  'blade',
+  'django-html',
   'ejs',
   'erb',
   'html',
@@ -28,5 +30,5 @@ export const SUPPORTED_LANGUAGES = [
   'typescriptreact',
   'vue',
   'xml',
-  'liquid',
+  'liquid'
 ]
