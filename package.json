@@ -33,6 +33,7 @@
   },
   "activationEvents": [
     "onLanguage:astro",
+    "onLanguage:blade",
     "onLanguage:django-html",
     "onLanguage:ejs",
     "onLanguage:erb",
@@ -87,6 +88,15 @@
       ]
     },
     "languages": [
+      {
+        "id": "blade",
+        "aliases": [
+          "Blade"
+        ],
+        "extensions": [
+          ".blade.php"
+        ]
+      },
       {
         "id": "liquid",
         "aliases": [
