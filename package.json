@@ -158,7 +158,34 @@
         "betterSvg.removeClasses": {
           "type": "boolean",
           "default": true,
-          "description": "Remove class attributes from SVG elements during optimization"
+          "description": "Remove class attributes from SVG elements during optimization (only applies to standalone .svg files; inline framework SVGs always keep their classes)"
+        },
+        "betterSvg.removeComments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove comments from the SVG during optimization"
+        },
+        "betterSvg.removeDoctype": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remove the <!DOCTYPE> declaration during optimization"
+        },
+        "betterSvg.cleanupIds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Minify and remove unused IDs during optimization. Disabled by default because it can break sprites, references and animations"
+        },
+        "betterSvg.floatPrecision": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Number of decimal places to keep for numeric values (lower means smaller files but less precision)"
+        },
+        "betterSvg.multipass": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run SVGO multiple times until the output stops shrinking for better compression"
         },
         "betterSvg.enableHover": {
           "type": "boolean",

@@ -24,7 +24,11 @@ import {
 } from './svgTransform'
 import { SUPPORTED_LANGUAGES } from './consts'
 import { calculateSavings } from './utils'
-import { getSvgoPlugins, optimizeSvgDocument } from './svgOptimizationService'
+import {
+  getSvgoOptions,
+  getSvgoPlugins,
+  optimizeSvgDocument
+} from './svgOptimizationService'
 
 let previewProvider: SvgPreviewProvider
 let gutterPreview: SvgGutterPreview
@@ -307,7 +311,10 @@ export async function optimizeSvgInline(
   range: vscode.Range
 ) {
   try {
-    const plugins = getSvgoPlugins(false)
+    // Inline/framework SVGs must keep classes and unknown attributes (v-if,
+    // className, on:click, ...), so removeClasses is always forced off here.
+    const svgoOptions = getSvgoOptions({ removeClasses: false })
+    const plugins = getSvgoPlugins(svgoOptions)
     const options = {
       useCamelCase: ['javascriptreact', 'typescriptreact'].includes(
         document.languageId
@@ -318,7 +325,8 @@ export async function optimizeSvgInline(
     const { preparedSvg, wasJsx } = prepareForOptimization(svgContent, options)
 
     const result = optimize(preparedSvg, {
-      multipass: true,
+      multipass: svgoOptions.multipass,
+      floatPrecision: svgoOptions.floatPrecision,
       plugins
     })
 
