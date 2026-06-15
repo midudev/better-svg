@@ -100,6 +100,33 @@ describe('collectSvgPreviewCandidates', () => {
 
     assert.deepStrictEqual(candidates, [])
   })
+
+  it('detects svg tags whose closing angle bracket is on a later line', () => {
+    const documentText = `<svg
+      viewBox="0 0 24 24"
+    >
+      <path d="M0 0h24v24H0z"/>
+    </svg
+    >`
+
+    const [candidate] = collectSvgPreviewCandidates(documentText, previewOptions)
+
+    assert.ok(candidate)
+    assert.strictEqual(candidate.kind, 'svg')
+    assert.ok(candidate.source.endsWith('</svg\n    >'))
+    assert.ok(candidate.previewSvg.includes('<path d="M0 0h24v24H0z"/>'))
+  })
+
+  it('detects inline svg markup exported inside a string literal', () => {
+    const documentText = 'export const iconCashierOutline = \'<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>\''
+    const offset = documentText.indexOf('<path') + 1
+    const candidate = findSvgPreviewAtOffset(documentText, offset, previewOptions)
+
+    assert.ok(candidate)
+    assert.strictEqual(candidate.kind, 'svg')
+    assert.strictEqual(candidate.startIndex, documentText.indexOf('<svg'))
+    assert.ok(candidate.previewSvg.includes('viewBox="0 0 24 24"'))
+  })
 })
 
 describe('findSvgPreviewAtOffset', () => {
