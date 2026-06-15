@@ -39,9 +39,9 @@ interface SvgSymbolDefinition {
   inner: string
 }
 
-const SVG_TAG_REGEX = /<svg\b[\s\S]*?>[\s\S]*?<\/svg>/gi
-const SYMBOL_TAG_REGEX = /<symbol\b([^>]*)>([\s\S]*?)<\/symbol>/gi
-const USE_TAG_REGEX = /<use\b[^>]*(?:\/>|>[\s\S]*?<\/use>)/gi
+const SVG_TAG_REGEX = /<svg\b[\s\S]*?>[\s\S]*?<\/svg\s*>/gi
+const SYMBOL_TAG_REGEX = /<symbol\b([^>]*)>([\s\S]*?)<\/symbol\s*>/gi
+const USE_TAG_REGEX = /<use\b[^>]*(?:\/>|>[\s\S]*?<\/use\s*>)/gi
 
 export function collectSvgPreviewCandidates(
   documentText: string,
@@ -152,7 +152,9 @@ function buildSymbolPreview(
   options: SvgPreviewOptions
 ): string | null {
   const symbolContent = convertJsxToSvg(source, options)
-  const match = symbolContent.match(/^<symbol\b([^>]*)>([\s\S]*?)<\/symbol>$/i)
+  const match = symbolContent.match(
+    /^<symbol\b([^>]*)>([\s\S]*?)<\/symbol\s*>$/i
+  )
   if (!match) {
     return null
   }

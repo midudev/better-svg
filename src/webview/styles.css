@@ -87,10 +87,6 @@ button {
   cursor: default;
 }
 
-.preview-header-controls svg path {
-  fill: none;
-}
-
 .toggle-dark-bg-wrapper {
   display: flex;
   align-items: center;
@@ -307,4 +303,8 @@ input[type='color'] {
   max-width: none;
   max-height: none;
   display: block;
+}
+
+.preview-svg-wrapper svg:not([fill]) {
+  fill: currentColor;
 }
