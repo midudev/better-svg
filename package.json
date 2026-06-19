@@ -2,7 +2,7 @@
   "name": "better-svg",
   "displayName": "Better SVG",
   "description": "Preview your SVG with color picker, zoom controls, and SVGO optimization.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "midudev",
   "author": {
     "name": "Miguel Ángel Durán",
