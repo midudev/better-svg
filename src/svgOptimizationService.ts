@@ -19,7 +19,9 @@ export interface SvgoOptions {
  * override specific values (e.g. inline/framework optimization always needs to
  * preserve classes and unknown attributes regardless of the user setting).
  */
-export function getSvgoOptions(overrides: Partial<SvgoOptions> = {}): SvgoOptions {
+export function getSvgoOptions(
+  overrides: Partial<SvgoOptions> = {}
+): SvgoOptions {
   const config = vscode.workspace.getConfiguration('betterSvg')
 
   return {

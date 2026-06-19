@@ -151,6 +151,44 @@ describe('collectSvgPreviewCandidates', () => {
     assert.ok(candidate.previewSvg.includes('<path d="M0 0h24v24H0z"/>'))
   })
 
+  it('detects a multiline icon whose closing tag bracket is on its own line (e.g. formatted Astro/HTML)', () => {
+    // Mirrors a Lucide-style icon as emitted by some HTML formatters, where the
+    // closing `</svg>` is split as `</svg\n>`.
+    const documentText = `<a href="/info">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg
+>
+</a>`
+
+    const candidates = collectSvgPreviewCandidates(documentText, previewOptions)
+    assert.strictEqual(candidates.length, 1)
+
+    const [candidate] = candidates
+    assert.ok(candidate)
+    assert.strictEqual(candidate.kind, 'svg')
+    assert.ok(candidate.source.endsWith('</svg\n>'))
+    assert.ok(candidate.previewSvg.includes('<circle cx="12" cy="12" r="10"'))
+
+    // Hovering anywhere inside the icon (here on the first child) must resolve it.
+    const offset = documentText.indexOf('<circle') + 1
+    const hovered = findSvgPreviewAtOffset(documentText, offset, previewOptions)
+    assert.ok(hovered)
+    assert.strictEqual(hovered.kind, 'svg')
+  })
+
   it('detects inline svg markup exported inside a string literal', () => {
     const documentText =
       'export const iconCashierOutline = \'<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>\''
