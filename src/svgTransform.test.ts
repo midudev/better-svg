@@ -6,6 +6,7 @@ import {
   convertSvgToJsx,
   prepareForOptimization,
   finalizeAfterOptimization,
+  matchAttributeQuoteStyle,
   jsxToSvgAttributeMap,
   svgToJsxAttributeMap
 } from './svgTransform'
@@ -853,5 +854,43 @@ describe('Template literal interpolations', () => {
       options
     )
     assert.strictEqual(roundTripped, input)
+  })
+})
+
+describe('matchAttributeQuoteStyle', () => {
+  it('restores single quotes when the original used them (avoids breaking "..." strings)', () => {
+    const original =
+      "<svg viewBox='0 0 24 24' fill='none'><path d='M0 0'/></svg>"
+    const optimized =
+      '<svg fill="none" viewBox="0 0 24 24"><path d="M0 0"/></svg>'
+
+    const result = matchAttributeQuoteStyle(optimized, original)
+    assert.ok(!result.includes('"'), `still has double quotes: ${result}`)
+    assert.strictEqual(
+      result,
+      "<svg fill='none' viewBox='0 0 24 24'><path d='M0 0'/></svg>"
+    )
+  })
+
+  it('keeps double quotes when the original already used double quotes', () => {
+    const original = '<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>'
+    const optimized = '<svg viewBox="0 0 24 24"><path d="M0 0"/></svg>'
+    assert.strictEqual(matchAttributeQuoteStyle(optimized, original), optimized)
+  })
+
+  it('keeps double quotes when the original mixed both quote styles', () => {
+    const original = `<svg viewBox="0 0 24 24" fill='none'><path d="M0 0"/></svg>`
+    const optimized =
+      '<svg fill="none" viewBox="0 0 24 24"><path d="M0 0"/></svg>'
+    assert.strictEqual(matchAttributeQuoteStyle(optimized, original), optimized)
+  })
+
+  it('does not swap when an attribute value contains a single quote', () => {
+    const original =
+      "<svg font-family='x'><text font-family='y'>hi</text></svg>"
+    // SVGO emits a value that itself contains a single quote.
+    const optimized = `<svg font-family="'Arial'"><text>hi</text></svg>`
+    // Swapping would produce font-family=''Arial'' (invalid), so it bails out.
+    assert.strictEqual(matchAttributeQuoteStyle(optimized, original), optimized)
   })
 })

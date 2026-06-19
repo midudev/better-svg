@@ -20,7 +20,8 @@ import { SvgGutterPreview, SvgHoverProvider } from './svgGutterPreview'
 import { optimize } from 'svgo/browser'
 import {
   prepareForOptimization,
-  finalizeAfterOptimization
+  finalizeAfterOptimization,
+  matchAttributeQuoteStyle
 } from './svgTransform'
 import { SUPPORTED_LANGUAGES } from './consts'
 import { calculateSavings } from './utils'
@@ -331,7 +332,11 @@ export async function optimizeSvgInline(
     })
 
     // Convert back to JSX if the original was JSX
-    const finalSvg = finalizeAfterOptimization(result.data, wasJsx, options)
+    let finalSvg = finalizeAfterOptimization(result.data, wasJsx, options)
+
+    // Preserve the author's quote style so optimizing an SVG embedded in a
+    // double-quoted string literal doesn't break the surrounding string.
+    finalSvg = matchAttributeQuoteStyle(finalSvg, svgContent)
 
     const edit = new vscode.WorkspaceEdit()
     edit.replace(document.uri, range, finalSvg)

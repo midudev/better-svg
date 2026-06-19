@@ -1153,3 +1153,37 @@ export function finalizeAfterOptimization(
 
   return optimizedSvg
 }
+
+/**
+ * SVGO always emits double-quoted attributes. When the SVG was authored with
+ * single-quoted attributes — typically because it lives inside a double-quoted
+ * JS/TS string literal — re-emitting double quotes would break the surrounding
+ * string. This restores the author's original quote style so the optimized SVG
+ * can be dropped back in place safely.
+ */
+export function matchAttributeQuoteStyle(
+  optimizedSvg: string,
+  originalSvg: string
+): string {
+  const usesSingleQuotes = /=\s*'[^']*'/.test(originalSvg)
+  const usesDoubleQuotes = /=\s*"[^"]*"/.test(originalSvg)
+
+  // Only act when the original used single quotes exclusively; otherwise keep
+  // SVGO's double quotes (the safe default for JSX and backtick templates).
+  if (!usesSingleQuotes || usesDoubleQuotes) {
+    return optimizedSvg
+  }
+
+  // Convert attr="value" -> attr='value', but bail on any value that itself
+  // contains a single quote (swapping would produce invalid markup).
+  let canSwapAll = true
+  const swapped = optimizedSvg.replace(/="([^"]*)"/g, (match, value) => {
+    if (value.includes("'")) {
+      canSwapAll = false
+      return match
+    }
+    return `='${value}'`
+  })
+
+  return canSwapAll ? swapped : optimizedSvg
+}
