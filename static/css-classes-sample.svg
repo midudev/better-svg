@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140">
+  <defs>
+    <style>
+      .panel,.cloud{fill:#eaf6ff}.panel,.frame,.sun{stroke:#1b3a4b;stroke-width:4px}.sun{fill:#ffd166}.cloud,.frame{stroke-linejoin:round}.frame{fill:none}.cloud{stroke:#1b3a4b;stroke-width:2px}
+    </style>
+  </defs>
+  <rect class="panel" x="6" y="6" width="228" height="128" rx="12"/>
+  <circle class="sun" cx="64" cy="54" r="26"/>
+  <ellipse class="cloud" cx="156" cy="66" rx="44" ry="22"/>
+  <ellipse class="cloud" cx="192" cy="60" rx="30" ry="17"/>
+  <path class="frame" d="M22 110h196"/>
+  <rect x="108" y="22" width="16" height="16" style="fill:#06d6a0"/>
+</svg>
