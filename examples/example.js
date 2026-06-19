@@ -8,7 +8,7 @@
 //    Stroke-based icons need `stroke` + `fill='none'`; without a stroke the
 //    line paths have no fillable area and nothing would render.
 export const closeIcon =
-  "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M18 6 6 18M6 6l12 12'/></svg>"
+  "<svg fill='none' stroke='currentColor' stroke-linecap='round' stroke-width='2' viewBox='0 0 24 24'><path d='M18 6 6 18M6 6l12 12'/></svg>"
 
 // 2. SVG inside a template literal, formatted across multiple lines.
 //    The closing bracket on its own line (`</svg\n>`) is still detected.
