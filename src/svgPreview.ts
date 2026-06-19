@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { convertJsxToSvg, type OptimizationOptions } from './svgTransform'
+import {
+  convertJsxToSvg,
+  stripTemplatePlaceholders,
+  type OptimizationOptions
+} from './svgTransform'
 import { ensureMinimumSize, propagateRootStroke } from './utils'
 
 export type SvgPreviewKind = 'svg' | 'symbol' | 'use'
@@ -222,7 +226,8 @@ function preparePreviewSvg(
   svgContent: string,
   options: SvgPreviewOptions
 ): string | null {
-  let previewSvg = ensureXmlns(svgContent)
+  let previewSvg = stripTemplatePlaceholders(svgContent)
+  previewSvg = ensureXmlns(previewSvg)
   previewSvg = previewSvg.replace(/currentColor/g, options.contrastColor)
   previewSvg = propagateRootStroke(previewSvg)
   previewSvg = ensureMinimumSize(previewSvg, options.minSize)

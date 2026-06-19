@@ -204,6 +204,91 @@ describe('collectSvgPreviewCandidates', () => {
     assert.strictEqual(candidate.startIndex, documentText.indexOf('<svg'))
     assert.ok(candidate.previewSvg.includes('viewBox="0 0 24 24"'))
   })
+
+  it('detects a multiline icon with a split </svg\n> closing tag inside a template literal', () => {
+    // The exact scenario reported: a Lucide-style icon assigned to a JS/TS
+    // template literal, with the closing bracket formatted on its own line.
+    const documentText = `const documentText = \`<a href="/info">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg
+>
+</a>\``
+
+    const candidates = collectSvgPreviewCandidates(documentText, previewOptions)
+    assert.strictEqual(candidates.length, 1)
+
+    const [candidate] = candidates
+    assert.ok(candidate)
+    assert.strictEqual(candidate.kind, 'svg')
+    assert.strictEqual(candidate.startIndex, documentText.indexOf('<svg'))
+    assert.ok(candidate.source.endsWith('</svg\n>'))
+    assert.ok(candidate.previewSvg.includes('<circle cx="12" cy="12" r="10"'))
+
+    // Hovering inside the icon must also resolve it.
+    const offset = documentText.indexOf('<circle') + 1
+    const hovered = findSvgPreviewAtOffset(documentText, offset, previewOptions)
+    assert.ok(hovered)
+    assert.strictEqual(hovered.kind, 'svg')
+  })
+
+  it('detects an svg inside a template literal with ${} interpolations', () => {
+    const documentText = [
+      'const icon = `<svg',
+      '  viewBox="0 0 24 24"',
+      '  class="${cls}"',
+      '  fill="${color}"',
+      '>',
+      '  <circle cx="12" cy="12" r="10"></circle>',
+      '  <text>${label}</text>',
+      '</svg>`'
+    ].join('\n')
+
+    const offset = documentText.indexOf('<circle') + 1
+    const candidate = findSvgPreviewAtOffset(
+      documentText,
+      offset,
+      previewOptions
+    )
+
+    assert.ok(candidate)
+    assert.strictEqual(candidate.kind, 'svg')
+    assert.strictEqual(candidate.startIndex, documentText.indexOf('<svg'))
+    // The interpolation tokens must not leak into the rendered preview.
+    assert.ok(!candidate.previewSvg.includes('${'))
+    assert.ok(!candidate.previewSvg.includes('__TPL_BASE64__'))
+    assert.ok(candidate.previewSvg.includes('<circle cx="12" cy="12" r="10"'))
+  })
+
+  it('collects a single candidate spanning an interpolated svg (gutter)', () => {
+    const documentText =
+      'const icon = `<svg viewBox="0 0 24 24" fill="${color}"><circle cx="12" cy="12" r="10"/></svg>`'
+
+    const candidates = collectSvgPreviewCandidates(documentText, previewOptions)
+    assert.strictEqual(candidates.length, 1)
+
+    const [candidate] = candidates
+    assert.ok(candidate)
+    assert.strictEqual(candidate.startIndex, documentText.indexOf('<svg'))
+    // The matched source must still include the raw interpolation.
+    assert.ok(candidate.source.includes('fill="${color}"'))
+    assert.ok(candidate.source.endsWith('</svg>'))
+    // ...but the rendered preview must be clean of interpolation artifacts.
+    assert.ok(!candidate.previewSvg.includes('${'))
+    assert.ok(!candidate.previewSvg.includes('__TPL_BASE64__'))
+  })
 })
 
 describe('findSvgPreviewAtOffset', () => {

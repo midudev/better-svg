@@ -60,6 +60,25 @@ describe('convertJsxToSvg', () => {
     assert.strictEqual(convertJsxToSvg(input), expected)
   })
 
+  it('should leave <style> CSS untouched (no base64 encoding of CSS braces)', () => {
+    const input =
+      '<svg><style>.bar{fill:#6c5ce7}.cap{fill:#a29bfe}</style><rect class="bar"/></svg>'
+    const result = convertJsxToSvg(input)
+    assert.ok(!result.includes('__JSX_BASE64__'))
+    assert.ok(result.includes('.bar{fill:#6c5ce7}'))
+    assert.ok(result.includes('.cap{fill:#a29bfe}'))
+  })
+
+  it('should keep <style> CSS intact while still converting JSX around it', () => {
+    const input =
+      '<svg><style>.a{fill:red}</style><path strokeWidth={2} className="a" /></svg>'
+    const result = convertJsxToSvg(input)
+    assert.ok(result.includes('.a{fill:red}'))
+    // The real JSX expression outside <style> is still encoded/converted.
+    assert.ok(result.includes('__JSX_BASE64__Mg==__'))
+    assert.ok(result.includes('class="a"'))
+  })
+
   it('should convert strokeLinecap to stroke-linecap', () => {
     const input = '<svg><path strokeLinecap="round" /></svg>'
     const expected = '<svg><path stroke-linecap="round" /></svg>'
@@ -731,5 +750,108 @@ describe('Complex Components', () => {
       !finalResult.includes('__JSX_BASE64__'),
       'Should not contain Base64 markers'
     )
+  })
+})
+
+describe('Template literal interpolations', () => {
+  it('preserves ${} interpolations across a JSX <-> SVG round trip', () => {
+    const inputs = [
+      '<svg viewBox="0 0 24 24" fill="${color}"><circle cx="12" cy="12" r="10"/></svg>',
+      '<svg class="icon ${cls}"><text>${label}</text></svg>',
+      '<svg fill="${color ?? {a: 1}.a}"><path d="M0 0"/></svg>'
+    ]
+
+    for (const input of inputs) {
+      const options = { useCamelCase: false }
+      const roundTripped = convertSvgToJsx(
+        convertJsxToSvg(input, options),
+        options
+      )
+      assert.strictEqual(roundTripped, input)
+    }
+  })
+
+  it('does not leave interpolation braces in the converted svg', () => {
+    const converted = convertJsxToSvg(
+      '<svg fill="${color}"><circle r="${r}"/></svg>',
+      { useCamelCase: false }
+    )
+    assert.ok(!converted.includes('${'))
+    assert.ok(!converted.includes('}'))
+  })
+
+  it('classifies an interpolation-only svg as JSX so it round trips on optimize', () => {
+    const input = '<svg fill="${color}"><circle r="${r}"/></svg>'
+    assert.strictEqual(isJsxSvg(input), true)
+
+    const options = { useCamelCase: false }
+    const { preparedSvg, wasJsx } = prepareForOptimization(input, options)
+    assert.strictEqual(wasJsx, true)
+    // The interpolated attribute must be hidden from SVGO so it isn't mangled.
+    assert.ok(preparedSvg.includes('data-better-svg-temp-fill='))
+    assert.ok(!preparedSvg.includes('${'))
+
+    // Simulate SVGO as identity and finalize.
+    const finalResult = finalizeAfterOptimization(preparedSvg, wasJsx, options)
+    assert.strictEqual(finalResult, input)
+  })
+
+  it('preserves a template literal nested inside a JSX expression', () => {
+    // Mirrors the common `className={`icon ${cls}`}` pattern.
+    const input = '<svg className={`icon ${cls}`}><path d="M0 0"/></svg>'
+    const options = { useCamelCase: false }
+    const roundTripped = convertSvgToJsx(
+      convertJsxToSvg(input, options),
+      options
+    )
+    assert.strictEqual(roundTripped, input)
+  })
+
+  it('preserves multiple interpolations in the same document', () => {
+    const input =
+      '<svg width="${w}" height="${h}"><circle r="${r}"/><circle r="${r2}"/></svg>'
+    const options = { useCamelCase: false }
+    const roundTripped = convertSvgToJsx(
+      convertJsxToSvg(input, options),
+      options
+    )
+    assert.strictEqual(roundTripped, input)
+  })
+
+  it('leaves lone "$" characters (no following brace) untouched', () => {
+    const input = '<svg data-cost="$5"><text>Total: $42</text></svg>'
+    const converted = convertJsxToSvg(input, { useCamelCase: false })
+    assert.strictEqual(converted, input)
+  })
+
+  it('does not throw on an unterminated interpolation', () => {
+    const input = '<svg fill="${color"><path d="M0 0"/></svg>'
+    const options = { useCamelCase: false }
+    // The "${" has no closing brace; it must be left as-is, not crash.
+    const roundTripped = convertSvgToJsx(
+      convertJsxToSvg(input, options),
+      options
+    )
+    assert.strictEqual(roundTripped, input)
+  })
+
+  it('round trips an empty interpolation without leaking the token', () => {
+    const input = '<svg data-x="${}"><path d="M0 0"/></svg>'
+    const options = { useCamelCase: false }
+    const converted = convertJsxToSvg(input, options)
+    assert.ok(!converted.includes('}'))
+    const roundTripped = convertSvgToJsx(converted, options)
+    assert.strictEqual(roundTripped, input)
+    assert.ok(!roundTripped.includes('__TPL_BASE64__'))
+  })
+
+  it('round trips adjacent interpolations without over-matching the token', () => {
+    const input = '<svg transform="${a}${b}"><path d="M0 0"/></svg>'
+    const options = { useCamelCase: false }
+    const roundTripped = convertSvgToJsx(
+      convertJsxToSvg(input, options),
+      options
+    )
+    assert.strictEqual(roundTripped, input)
   })
 })

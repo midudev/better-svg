@@ -18,6 +18,9 @@ const BASE64_PREFIX = '__JSX_BASE64__'
 const BASE64_SUFFIX = '__'
 const BLADE_BASE64_PREFIX = '__BLADE_BASE64__'
 const BLADE_BASE64_SUFFIX = '__'
+const TEMPLATE_BASE64_PREFIX = '__TPL_BASE64__'
+const TEMPLATE_BASE64_SUFFIX = '__'
+const TEMPLATE_TOKEN_REGEX = /__TPL_BASE64__[A-Za-z0-9+/=]*__/g
 
 function encodeJsx(content: string): string {
   return BASE64_PREFIX + Buffer.from(content).toString('base64') + BASE64_SUFFIX
@@ -26,6 +29,28 @@ function encodeJsx(content: string): string {
 function decodeJsx(content: string): string | null {
   if (content.startsWith(BASE64_PREFIX) && content.endsWith(BASE64_SUFFIX)) {
     const b64 = content.slice(BASE64_PREFIX.length, -BASE64_SUFFIX.length)
+    return Buffer.from(b64, 'base64').toString('utf-8')
+  }
+  return null
+}
+
+function encodeTemplate(content: string): string {
+  return (
+    TEMPLATE_BASE64_PREFIX +
+    Buffer.from(content).toString('base64') +
+    TEMPLATE_BASE64_SUFFIX
+  )
+}
+
+function decodeTemplate(content: string): string | null {
+  if (
+    content.startsWith(TEMPLATE_BASE64_PREFIX) &&
+    content.endsWith(TEMPLATE_BASE64_SUFFIX)
+  ) {
+    const b64 = content.slice(
+      TEMPLATE_BASE64_PREFIX.length,
+      -TEMPLATE_BASE64_SUFFIX.length
+    )
     return Buffer.from(b64, 'base64').toString('utf-8')
   }
   return null
@@ -751,6 +776,81 @@ function replaceJsxSpreads(content: string): string {
   return result
 }
 
+function findBalancedBraceEnd(content: string, openIdx: number): number | null {
+  let balance = 1
+  let i = openIdx + 1
+  let inString = false
+  let stringChar = ''
+
+  while (i < content.length) {
+    const char = content[i]
+    const prevChar = content[i - 1]
+
+    if (inString) {
+      if (char === stringChar && prevChar !== '\\') {
+        inString = false
+      }
+    } else if (char === '"' || char === "'" || char === '`') {
+      inString = true
+      stringChar = char
+    } else if (char === '{') {
+      balance++
+    } else if (char === '}') {
+      balance--
+      if (balance === 0) {
+        return i + 1
+      }
+    }
+
+    i++
+  }
+
+  return null
+}
+
+/**
+ * Encodes template-literal interpolations like `${expr}` into Base64 tokens.
+ * This keeps embedded SVG strings (e.g. `const icon = `<svg fill="${color}">...`)
+ * renderable: the `${...}` braces would otherwise break JSX brace parsing and
+ * trip the preview's brace validation. Tokens are restored on the way back.
+ */
+function replaceTemplateInterpolations(content: string): string {
+  let result = ''
+  let currentIndex = 0
+
+  while (currentIndex < content.length) {
+    const startIdx = content.indexOf('${', currentIndex)
+    if (startIdx === -1) {
+      result += content.slice(currentIndex)
+      break
+    }
+
+    // Append everything before "${"
+    result += content.slice(currentIndex, startIdx)
+
+    const end = findBalancedBraceEnd(content, startIdx + 1)
+    if (end === null) {
+      result += '${'
+      currentIndex = startIdx + 2
+      continue
+    }
+
+    const expression = content.slice(startIdx + 2, end - 1)
+    result += encodeTemplate(expression)
+    currentIndex = end
+  }
+
+  return result
+}
+
+/**
+ * Removes leftover template-interpolation tokens so previews render cleanly
+ * (e.g. `fill="${color}"` becomes `fill=""` rather than showing the token).
+ */
+export function stripTemplatePlaceholders(content: string): string {
+  return content.replace(TEMPLATE_TOKEN_REGEX, '')
+}
+
 function removeJsxComments(content: string): string {
   // Remove block comments {/* ... */}
   content = content.replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
@@ -776,7 +876,9 @@ function protectEncodedAttributes(content: string): string {
 
       // Decide if we should protect this attribute
       const isEncoded =
-        value?.includes(BASE64_PREFIX) || value?.includes(BLADE_BASE64_PREFIX)
+        value?.includes(BASE64_PREFIX) ||
+        value?.includes(BLADE_BASE64_PREFIX) ||
+        value?.includes(TEMPLATE_BASE64_PREFIX)
       const isDirective =
         /^(client:|v-|on:|bind:|class:|use:|let:|animate:|transition:|[:@])/.test(
           attr
@@ -825,6 +927,35 @@ function restoreEncodedAttributes(content: string): string {
   )
 }
 
+const STYLE_BLOCK_PLACEHOLDER = '__BESVG_STYLE_BLOCK_'
+
+/**
+ * Pull every `<style>…</style>` block out of the content and replace it with a
+ * neutral placeholder. CSS naturally uses braces (`.foo{fill:red}`), which the
+ * JSX brace handling would otherwise mistake for text interpolations and
+ * base64-encode, corrupting the stylesheet (the preview then renders black).
+ * `isJsxSvg` already excludes `<style>` blocks, so the conversion must leave
+ * them untouched as well.
+ */
+function maskStyleBlocks(content: string, store: string[]): string {
+  return content.replace(/<style[\s\S]*?<\/style\s*>/gi, (block) => {
+    const token = `${STYLE_BLOCK_PLACEHOLDER}${store.length}__`
+    store.push(block)
+    return token
+  })
+}
+
+function restoreStyleBlocks(content: string, store: string[]): string {
+  if (store.length === 0) {
+    return content
+  }
+
+  return content.replace(
+    new RegExp(`${STYLE_BLOCK_PLACEHOLDER}(\\d+)__`, 'g'),
+    (match, index) => store[Number(index)] ?? match
+  )
+}
+
 /**
  * Converts JSX SVG syntax to valid SVG XML
  * - Converts expression values {2} to "2"
@@ -835,6 +966,14 @@ export function convertJsxToSvg(
   svgContent: string,
   options: OptimizationOptions = { useCamelCase: true }
 ): string {
+  // Protect <style> CSS from the JSX brace transforms below; restored at the end.
+  const styleBlocks: string[] = []
+  svgContent = maskStyleBlocks(svgContent, styleBlocks)
+
+  // Encode template-literal interpolations like ${expr} first so their braces
+  // don't interfere with JSX brace parsing or the preview's brace validation.
+  svgContent = replaceTemplateInterpolations(svgContent)
+
   // Remove JSX comments first to avoid parsing issues
   svgContent = removeJsxComments(svgContent)
 
@@ -867,6 +1006,9 @@ export function convertJsxToSvg(
   // Protect all attributes with encoded values from SVGO
   // This handles style, event handlers, and anything else that is dynamically encoded
   svgContent = protectEncodedAttributes(svgContent)
+
+  // Restore the untouched <style> blocks pulled out at the start.
+  svgContent = restoreStyleBlocks(svgContent, styleBlocks)
 
   return svgContent
 }
@@ -961,6 +1103,12 @@ export function convertSvgToJsx(
       return match
     }
   )
+
+  // Restore template-literal interpolations: token -> ${expr}
+  svgContent = svgContent.replace(TEMPLATE_TOKEN_REGEX, (token) => {
+    const decoded = decodeTemplate(token)
+    return decoded !== null ? `\${${decoded}}` : token
+  })
 
   return svgContent
 }
