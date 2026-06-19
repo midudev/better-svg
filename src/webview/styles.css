@@ -240,6 +240,16 @@ button {
   );
 }
 
+.color-picker-wrapper.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.color-picker-wrapper.disabled:hover,
+.color-picker-wrapper.disabled:active {
+  background-color: transparent;
+}
+
 .color-picker-swatch {
   width: 16px;
   height: 16px;

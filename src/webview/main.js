@@ -50,6 +50,19 @@ const vscode = acquireVsCodeApi()
   colorSwatch.style.backgroundColor = currentColor
   svgWrapper.style.color = currentColor
 
+  // The color picker only has an effect on elements painted with `currentColor`.
+  // Disable it when the current SVG doesn't use currentColor anywhere.
+  const updateColorPickerAvailability = () => {
+    const hasCurrentColor = /currentcolor/i.test(svgWrapper.innerHTML || '')
+    colorPickerWrapper.classList.toggle('disabled', !hasCurrentColor)
+    colorPickerWrapper.setAttribute('aria-disabled', String(!hasCurrentColor))
+    colorPickerWrapper.title = hasCurrentColor
+      ? 'Change currentColor value'
+      : 'This SVG has no currentColor to change'
+  }
+
+  updateColorPickerAvailability()
+
   const getSvgBounds = (svg) => {
     try {
       const bbox = svg.getBBox()
@@ -162,6 +175,7 @@ const vscode = acquireVsCodeApi()
     if (wrapper) {
       wrapper.innerHTML = content
       wrapper.style.color = currentColor
+      updateColorPickerAvailability()
       scheduleSvgFit()
       updateTransform()
     }
@@ -189,6 +203,9 @@ const vscode = acquireVsCodeApi()
   }
 
   colorPickerWrapper.addEventListener('click', () => {
+    if (colorPickerWrapper.classList.contains('disabled')) {
+      return
+    }
     colorPicker.click()
   })
 
@@ -353,6 +370,7 @@ const vscode = acquireVsCodeApi()
     } else if (message.type === 'clear') {
       updateSvgFileSize()
       svgWrapper.innerHTML = ''
+      updateColorPickerAvailability()
       resetZoom()
     }
   })
