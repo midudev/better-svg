@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140">
+  <!--
+    Demo for the multi-class SVGO bug fixed in better-svg.
+    Every bar and cap takes its fill/stroke from a CSS class shared by
+    several elements (.bar, .cap). Optimizing used to drop those styles
+    (the shapes turned black/invisible); now the class rules are inlined
+    before the class attributes are removed, so the colours survive.
+  -->
+  <defs>
+    <style>
+      .bar{fill:#6c5ce7}.bar,.axis{stroke:#2d3436;stroke-width:2px}.axis{fill:none;stroke-linecap:round}.cap{fill:#a29bfe}
+    </style>
+  </defs>
+  <path class="axis" d="M28 16v100h150"/>
+  <rect class="bar" x="40" y="76" width="24" height="40"/>
+  <rect class="bar" x="78" y="56" width="24" height="60"/>
+  <rect class="bar" x="116" y="36" width="24" height="80"/>
+  <rect class="bar" x="154" y="66" width="24" height="50"/>
+  <circle class="cap" cx="52" cy="76" r="5"/>
+  <circle class="cap" cx="90" cy="56" r="5"/>
+  <circle class="cap" cx="128" cy="36" r="5"/>
+  <circle class="cap" cx="166" cy="66" r="5"/>
+</svg>
