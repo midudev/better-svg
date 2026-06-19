@@ -214,6 +214,7 @@
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:webview": "node -e \"require('fs').watch('src/webview', () => require('child_process').exec('pnpm copy-webview'))\"",
     "package": "pnpm check-types && node esbuild.js --production && pnpm copy-webview",
+    "install:local": "bash scripts/install-local.sh",
     "check": "pnpm check-types",
     "check-types": "tsc --noEmit",
     "copy-webview": "mkdir -p dist/webview && cp src/webview/*.html src/webview/*.css src/webview/*.js dist/webview/",
