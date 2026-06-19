@@ -2,6 +2,21 @@
 
 All notable changes to the "Better SVG" extension will be documented in this file.
 
+## [0.5.0] - 2026-06-19
+
+### Added
+
+- Detect and preview inline SVGs embedded inside JavaScript/TypeScript string literals and template literals, including SVGs that use `${...}` interpolations
+- Detect multiline icons whose closing tag bracket is split onto its own line (`</svg\n>`), as emitted by some formatters
+- Disable the "Change currentColor" control in the preview panel when the SVG has no `currentColor` to change
+- Example files (`examples/example.js`, `examples/example.ts`) showing SVG detection inside string literals
+- Local install script (`scripts/install-local.sh` / `pnpm install:local`) to build, install, and reload the extension across VS Code and Cursor
+
+### Fixed
+
+- Preserve the author's attribute quote style after SVGO optimization, so optimizing an SVG embedded in a double-quoted string no longer breaks the surrounding string literal
+- Preserve `<style>` blocks and template-literal interpolations through the JSX ⇄ SVG conversion used for optimization
+
 ## [0.1.0] - 2025-10-20
 
 ### Added
