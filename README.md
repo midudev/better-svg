@@ -17,6 +17,10 @@
         VS Marketplace
     </a>
     <span>&nbsp;❖&nbsp;</span>
+    <a href="https://open-vsx.org/extension/midudev/better-svg" target="_blank" rel="noopener">
+        Open VSX
+    </a>
+    <span>&nbsp;❖&nbsp;</span>
     <a href="#features">
         Features
     </a>
