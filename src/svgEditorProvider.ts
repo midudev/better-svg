@@ -104,7 +104,7 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
 
   public updatePreview(document: vscode.TextDocument) {
     if (this._view) {
-      const text=document.getText();
+      const text = document.getText();
       // creamos ranges asociados a elementos de svg (excluidos los no renderizables)
       const { txtModified, mapaRangos } = map2src(text);
       nodeRangesSet(document.uri, mapaRangos);
@@ -122,6 +122,12 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
       this._view.webview.postMessage({
         type: 'clear'
       })
+    }
+  }
+
+  public postPreview(type: string, content: string) {
+    if (this._view) {
+      this._view.webview.postMessage({ type: type, content: content })
     }
   }
 
@@ -198,6 +204,8 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
       )
       throw error
     }
+
+
   }
 
   private updateTextDocument(document: vscode.TextDocument, content: string) {

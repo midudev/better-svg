@@ -59,7 +59,8 @@ button {
   transition: background-color 0.2s;
   padding: 4px;
   margin: -4px;
-  &.selected{
+
+  &.selected {
     background-color: color-mix(in srgb,
         var(--vscode-foreground) 15%,
         transparent);
@@ -120,7 +121,7 @@ button {
 .preview-header-controls svg {
   width: 18px;
   height: 18px;
-  fill: none;
+  /*fill: none;*/
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.5px;
@@ -128,11 +129,10 @@ button {
   opacity: 0.8;
   pointer-events: none;
   transition: opacity 0.2s;
-  fill: none;
 }
 
 
-.toggle-dark-bg, .center-icon, .optimize-icon{
+.toggle-dark-bg, .center-icon, .optimize-icon {
   color: var(--vscode-foreground);
 }
 
@@ -153,15 +153,17 @@ button {
 .color-picker-wrapper {
   position: relative;
   gap: 8px;
-  &:hover{
-      background-color: color-mix(in srgb,
-      var(--vscode-foreground) 10%,
-      transparent);
+
+  &:hover {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 10%,
+        transparent);
   }
-  &:active{
-      background-color: color-mix(in srgb,
-      var(--vscode-foreground) 15%,
-      transparent);
+
+  &:active {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 15%,
+        transparent);
   }
 }
 
@@ -249,9 +251,11 @@ input[type='color'] {
   /*filter: drop-shadow(0 0 6px #fff);*/
   animation: colorShift 4s linear infinite;
   vector-effect: non-scaling-stroke;
-  stroke-width: 1px !important;
   stroke: #f00;
-  stroke-dasharray: 4px !important;
+  /*
+  stroke-width: 1px !important;
+  stroke-dasharray: 4px !important;  
+  */
   touch-action: none;
   pointer-events: none;
 }
@@ -276,4 +280,14 @@ input[type='color'] {
   100% {
     stroke: #fff
   }
+}
+
+
+#objInfo {
+  position: absolute;
+  background: #0009;
+  padding: 4px;
+  border-radius: 4px;
+  touch-action: none;
+  pointer-events: none;
 }

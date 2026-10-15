@@ -32,7 +32,7 @@ import {
 } from './svgOptimizationService'
 
 import { parseStringToVsCodeColor, vsColor2str, setCachedColors } from './colorUtils'
-
+import {cache} from './svgUtils'
 
 let previewProvider: SvgPreviewProvider
 let gutterPreview: SvgGutterPreview
@@ -341,6 +341,25 @@ export function activate(context: vscode.ExtensionContext) {
         }
       )
     )
+
+
+    vscode.window.onDidChangeTextEditorSelection((evt: vscode.TextEditorSelectionChangeEvent) => {
+      const sels = evt.selections;
+      if (sels[0] && sels[0].start && evt.textEditor) {
+        const doc = evt.textEditor.document;
+        const docURI = doc.uri.toString() || "";
+        const pos = doc.offsetAt(sels[0].start);
+        console.log("pos", pos);
+        const thisRanges = cache.get(docURI);
+        if (thisRanges !== undefined) {
+          thisRanges.forEach((e, n) => {
+            if (pos >= e.start && pos <= e.end) {
+              previewProvider.postPreview("editing", n.toString());
+            }
+          });
+        }
+      }
+    })
   } catch (error: any) {
     vscode.window.showErrorMessage(
       'Better SVG: Failed to activate extension!\n' +

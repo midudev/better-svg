@@ -20,7 +20,11 @@ const svgns = "http://www.w3.org/2000/svg";
 
 const touchZoom = 0;
 const touchPick = 1;
+let centerObj = 0;
 
+let scale = 1
+let translateX = 0
+let translateY = 0
 
 let selectedElement = undefined;
 let touchMode = touchZoom;
@@ -34,6 +38,8 @@ function sendDataToDocument(textData) {
   vscode.postMessage({ type: 'find', text: textData });
 }
 
+const PX = (n) => { return n + "px" }
+
 const _atr = (obj, atr, value) => {
   if (value)
     obj.setAttribute(atr, value);
@@ -41,7 +47,10 @@ const _atr = (obj, atr, value) => {
     return obj.getAttribute(atr) ?? '';
 }
 
-const _atrs = (obj, atrs) => Object.keys(atrs).forEach(a => _atr(obj, a, atrs[a]));
+const _atrs = (obj, atrs) => Object.keys(atrs).forEach((a) => {
+  console.log(a, atrs[a]);
+  _atr(obj, a, atrs[a])
+});
 
 const _atrDel = (obj, atrs) => {
   atrs.forEach(a => obj.removeAttribute(a));
@@ -72,31 +81,113 @@ const _elNS = (tag, ns = "", ats, parent = null) => {
   return o;
 }
 
+const byId = (id, parent) => {
+  if (!parent) parent = document;
+  return parent.getElementById(id);
+}
+
+
+
+const _fill = (obj) => {
+  let fill = _atr(obj, "fill");
+  // fill defined in style rules over attribute
+  if (obj.style.fill != "") {
+    fill = obj.style.fill;
+  }
+  return fill;
+};
+
 const border = (obj) => {
   Array.from(obj.children).forEach((i) => {
     if (i.tagName && renderables.indexOf(i.tagName.toLowerCase()) > -1) {
+      i.addEventListener("mouseenter", (e) => {
+        const objInfo = byId("objInfo");
+        let este = e.srcElement;
+        let str = este.tagName;
+        if (_atr(este, "id")) str += "<br>#" + _atr(este, "id");
+        const fill = _fill(este);
+        if (fill != '') {
+          str += `<br><div style='background:${fill}' alt='Fill: ${fill}'>&nbsp;</div>`;
+        }
+        objInfo.innerHTML = str;
+      });
+
       i.addEventListener("click", (e) => {
         if (touchMode === touchZoom) return;
         e.stopPropagation();
         src = e.srcElement;
         selectedElement = src;
-        if (document.getElementById("deleteSel")) {
-          document.getElementById("deleteSel").remove();
+        if (byId("deleteSel")) {
+          byId("deleteSel").remove();
         }
         const aaa = Replicate(selectedElement);
         src.parentElement.appendChild(aaa);
+        adjustStroke(aaa, scale);
         sendDataToDocument(_atr(src, "data-vsc-id"));
       });
       border(i);
+    } else {
+      i.addEventListener("mouseenter", (e) => {
+        byId("objInfo").innerHTML = '';
+      });
     }
   });
 }
+
 
 // Best function name ever declared
 const cleanClon = (clon) => {
   const del = ["fill", "filter", "stroke", "stroke-width", "stroke-dashoffset", "fill-opacity", "clip-path"];
   styDel(clon, del);
   _atrDel(clon, del);
+}
+
+
+// Producto de las matrices de transform de todos los ancestros de `el` (incluido el propio `el`)
+// Producto de las matrices de transform de `el` y todos sus ancestros
+function acumulatedMat(el) {
+  let m = new DOMMatrix();
+  for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+    const t = getComputedStyle(n).transform;
+    if (t && t !== 'none') m = new DOMMatrix(t).multiply(m);
+  }
+  return m;
+}
+
+function zoomObj(el, cntr, { viewport = cntr.parentElement } = {}) {
+  const bakTransition = cntr.style.transition;
+  const ini = getComputedStyle(cntr).transform;
+  cntr.style.transition = 'none';
+  const vRect = viewport.getBoundingClientRect();
+  let eRect = el.getBoundingClientRect();
+  if (!eRect.width || !eRect.height) {
+    cntr.style.transition = bakTransition;
+    return null;
+  }
+
+  let actual = new DOMMatrix(ini);
+  const s = Math.min(Math.min(vRect.width / eRect.width, vRect.height / eRect.height) * 0.9, Infinity);
+  actual = new DOMMatrix().scale(s).multiply(actual);
+  cntr.style.transform = actual.toString();
+  eRect = el.getBoundingClientRect();
+  const dx = (vRect.left + vRect.width / 2) - (eRect.left + eRect.width / 2);
+  const dy = (vRect.top + vRect.height / 2) - (eRect.top + eRect.height / 2);
+  const P = acumulatedMat(cntr.parentElement);
+  const local = P.inverse().transformPoint(new DOMPoint(dx, dy, 0, 0)); // w=0: vector
+  const final = new DOMMatrix().translate(local.x, local.y).multiply(actual);
+  cntr.style.transform = ini;
+  void cntr.offsetWidth;
+  _styles(cntr, { transition: bakTransition || 'transform 0.3s ease', transform: final.toString() });
+  // cntr.style.transition = bakTransition || 'transform 0.3s ease';
+  // cntr.style.transform = final.toString();
+  return final;
+}
+
+
+const adjustStroke = (obj, scale) => {
+  if (obj) {
+    _styles(obj, { "stroke-width": PX(2 / scale), "stroke-dasharray": PX(4 / scale) });
+  }
 }
 
 const Replicate = (orig) => {
@@ -109,6 +200,7 @@ const Replicate = (orig) => {
     });
     _atrs(clon, { class: "sel-ele", id: "deleteSel" });
     _styles(clon, { fill: "transparent" });
+    adjustStroke(clon, scale);
     orig.parentElement.appendChild(clon);
   }
   return clon;
@@ -129,15 +221,13 @@ const Replicate = (orig) => {
     const previewFillRatio = 0.8
     const zoomWrapper = $('#zoomWrapper')
     const objectPicker = $('#objectPicker')
+    const objectFit = $('#objectFit')
 
     // Get default color from the color picker value (set by template)
     let currentColor = colorPicker.value
     let isDarkBackground = false
 
     // Zoom and pan state
-    let scale = 1
-    let translateX = 0
-    let translateY = 0
     let isPanning = false
     let wasPanning = false
     let panStartX = 0
@@ -237,8 +327,8 @@ const Replicate = (orig) => {
         targetHeight = targetWidth / aspectRatio
       }
 
-      svg.style.width = `${Math.max(Math.round(targetWidth), 1)}px`
-      svg.style.height = `${Math.max(Math.round(targetHeight), 1)}px`
+      svg.style.width = PX(Math.max(Math.round(targetWidth), 1))
+      svg.style.height = PX(Math.max(Math.round(targetHeight), 1))
     }
 
     const scheduleSvgFit = () => {
@@ -308,8 +398,9 @@ const Replicate = (orig) => {
         preview.classList.add('dark-background')
         toggleDarkBg.innerHTML =
           '<path d="M17 3.34a10 10 0 1 1 -15 8.66l.005 -.324a10 10 0 0 1 14.995 -8.336m-9 1.732a8 8 0 0 0 4.001 14.928l-.001 -16a8 8 0 0 0 -4 1.072" />'
-        _atr(toggleDarkBg, 'fill', 'currentColor')
         _atrDel(toggleDarkBg, ['stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'])
+        //_atr(toggleDarkBg, 'fill', 'currentColor')
+        _atrs(toggleDarkBg, { fill: 'currentColor' })
       } else {
         preview.classList.remove('dark-background')
         toggleDarkBg.innerHTML =
@@ -339,6 +430,17 @@ const Replicate = (orig) => {
         preview.style.cursor = "pointer";
       }
     })
+
+    objectFit.addEventListener('click', () => {
+      centerObj = (centerObj == 1 ? 0 : 1);
+      if (centerObj === 1) {
+        objectFit.classList.add("selected");
+      } else {
+        objectFit.classList.remove("selected");
+      }
+    })
+
+
 
     // Center icon functionality
     centerIconWrapper.addEventListener('click', () => {
@@ -372,6 +474,15 @@ const Replicate = (orig) => {
         updateTransform()
       }
     })
+
+
+    svgWrapper.addEventListener("mousemove", (e) => {
+      const layInfo = $("#objInfo");
+      const offsetTop = document.querySelector(".preview-header").offsetHeight;
+      layInfo.style.left = PX(e.clientX);
+      layInfo.style.top = PX(e.clientY - offsetTop);
+    });
+
 
     preview.addEventListener(
       'wheel',
@@ -463,6 +574,31 @@ const Replicate = (orig) => {
     // Listen for updates from extension
     window.addEventListener('message', (event) => {
       const message = event.data
+      if (message.type === 'editing') {
+        console.log("hay que seleccionar ", message.content);
+        thisSel = document.querySelector(`[data-vsc-id='${message.content}']`);
+        if (centerObj == 1) {
+          if (selectedElement != thisSel) {
+            if (thisSel.tagName && renderables.indexOf(thisSel.tagName.toLowerCase()) > -1) {
+              selectedElement = thisSel;
+              if (byId("deleteSel")) {
+                byId("deleteSel").remove();
+              }
+              const aaa = Replicate(selectedElement);
+              thisSel.parentElement.appendChild(aaa);
+
+              const m = zoomObj(selectedElement, byId("svgWrapper"));
+              // revisar            
+              if (m) {
+                // estado.tx = m.e;
+                // estado.ty = m.f; 
+                scale = m.a;
+              }
+            }
+          }
+        }
+
+      }
       if (message.type === 'update') {
         const svg = svgWrapper.querySelector('svg')
         if (!svg) {
