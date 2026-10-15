@@ -19,5 +19,5 @@
   <circle class="cap" cx="52" cy="76" r="5"/>
   <circle class="cap" cx="90" cy="56" r="5"/>
   <circle class="cap" cx="128" cy="36" r="5"/>
-  <circle class="cap" cx="166" cy="66" r="5"/>
+  <circle cx="166" cy="66" r="5" fill="#f00"/>
 </svg>

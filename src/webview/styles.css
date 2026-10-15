@@ -41,6 +41,7 @@ button {
   background: none;
 }
 
+
 .preview-wrapper {
   min-height: 30vh;
   height: 100%;
@@ -48,6 +49,36 @@ button {
   display: flex;
   flex-direction: column;
 }
+
+/* common style for all the .toggle-XXX-wrapper */
+.ico-wrapper {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  padding: 4px;
+  margin: -4px;
+
+  &.selected {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 15%,
+        transparent);
+  }
+
+  &:hover {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 10%,
+        transparent);
+  }
+
+  &:active {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 15%,
+        transparent);
+  }
+}
+
 
 .preview-header {
   height: 40px;
@@ -87,126 +118,33 @@ button {
   cursor: default;
 }
 
-.toggle-dark-bg-wrapper {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  padding: 4px;
-  margin: -4px;
-
-  &:hover {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 10%,
-      transparent
-    );
-  }
-
-  &:active {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 15%,
-      transparent
-    );
-  }
-}
-
-.toggle-dark-bg {
+.preview-header-controls svg {
   width: 18px;
   height: 18px;
+  /*fill: none;*/
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5px;
   color: var(--vscode-foreground);
   opacity: 0.8;
   pointer-events: none;
   transition: opacity 0.2s;
 }
 
-.toggle-dark-bg-wrapper:hover .toggle-dark-bg {
-  opacity: 1;
-}
 
-.center-icon-wrapper {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  padding: 4px;
-  margin: -4px;
-
-  &:hover {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 10%,
-      transparent
-    );
-  }
-
-  &:active {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 15%,
-      transparent
-    );
-  }
-}
-
-.center-icon {
-  width: 18px;
-  height: 18px;
+.toggle-dark-bg, .center-icon, .optimize-icon {
   color: var(--vscode-foreground);
-  opacity: 0.8;
-  pointer-events: none;
-  transition: opacity 0.2s;
 }
 
-.center-icon-wrapper:hover .center-icon {
-  opacity: 1;
-}
-
-.optimize-wrapper {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  padding: 4px;
-  margin: -4px;
-
-  &:hover {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 10%,
-      transparent
-    );
-  }
-
-  &:active {
-    background-color: color-mix(
-      in srgb,
-      var(--vscode-foreground) 15%,
-      transparent
-    );
-  }
-}
-
-.optimize-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--vscode-foreground);
-  opacity: 0.8;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
+.toggle-dark-bg-wrapper:hover .toggle-dark-bg,
+.center-icon-wrapper:hover .center-icon,
 .optimize-wrapper:hover .optimize-icon {
   opacity: 1;
 }
 
+
+
 .color-picker-icon {
-  width: 18px;
-  height: 18px;
   color: var(--vscode-foreground);
   opacity: 0.8;
   pointer-events: none;
@@ -214,30 +152,25 @@ button {
 
 .color-picker-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
   gap: 8px;
-  cursor: pointer;
-  padding: 4px;
-  margin: -4px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 10%,
+        transparent);
+  }
+
+  &:active {
+    background-color: color-mix(in srgb,
+        var(--vscode-foreground) 15%,
+        transparent);
+  }
 }
 
-.color-picker-wrapper:hover {
-  background-color: color-mix(
-    in srgb,
-    var(--vscode-foreground) 10%,
-    transparent
-  );
-}
 
-.color-picker-wrapper:active {
-  background-color: color-mix(
-    in srgb,
-    var(--vscode-foreground) 15%,
-    transparent
-  );
+
+.pick-object-icon svg path {
+  fill: currentColor;
 }
 
 .color-picker-wrapper.disabled {
@@ -270,13 +203,8 @@ input[type='color'] {
   flex: 1;
   padding: 16px;
   background-color: var(--vscode-editorWidget-background);
-  background: repeating-conic-gradient(
-      color-mix(in srgb, var(--vscode-editorWidget-background) 90%, transparent)
-        0% 25%,
-      color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent) 0%
-        50%
-    )
-    50% / 18px 18px;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--vscode-editorWidget-background) 90%, transparent) 0% 25%,
+      color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent) 0% 50%) 50% / 18px 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,4 +245,49 @@ input[type='color'] {
 
 .preview-svg-wrapper svg:not([fill]) {
   fill: currentColor;
+}
+
+.sel-ele {
+  /*filter: drop-shadow(0 0 6px #fff);*/
+  animation: colorShift 4s linear infinite;
+  vector-effect: non-scaling-stroke;
+  stroke: #f00;
+  /*
+  stroke-width: 1px !important;
+  stroke-dasharray: 4px !important;  
+  */
+  touch-action: none;
+  pointer-events: none;
+}
+
+@keyframes colorShift {
+  0% {
+    stroke: #fff
+  }
+
+  25% {
+    stroke: #f00
+  }
+
+  50% {
+    stroke: #0f0
+  }
+
+  75% {
+    stroke: #00f
+  }
+
+  100% {
+    stroke: #fff
+  }
+}
+
+
+#objInfo {
+  position: absolute;
+  background: #0009;
+  padding: 4px;
+  border-radius: 4px;
+  touch-action: none;
+  pointer-events: none;
 }

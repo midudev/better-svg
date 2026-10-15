@@ -22,6 +22,7 @@ import {
   type SvgPreviewOptions
 } from './svgPreview'
 import { formatBytes } from './utils'
+import { getCachedColors } from './colorUtils'
 
 interface SvgCacheEntry {
   dataUri: string
@@ -63,6 +64,12 @@ export class SvgHoverProvider implements vscode.HoverProvider {
     const enableHover = config.get<boolean>('enableHover', true)
     if (!enableHover) {
       return null
+    }
+
+    // evitamos que se solapen el mezclador de color y la info del svg
+    const cachedColors = getCachedColors(document.uri);
+    if (cachedColors?.some(ci => ci.range.contains(position))) {
+      return null;
     }
 
     const text = document.getText()
@@ -174,6 +181,7 @@ export class SvgGutterPreview {
     }
 
     const text = editor.document.getText()
+
     const candidates = collectSvgPreviewCandidates(
       text,
       getPreviewOptions(editor.document.languageId, 16)

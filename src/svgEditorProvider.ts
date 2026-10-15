@@ -18,6 +18,24 @@ import * as vscode from 'vscode'
 import * as fs from 'fs'
 import { optimizeSvgDocument } from './svgOptimizationService'
 
+import { map2src, nodeRangesSet, nodeRangesGet } from './svgUtils'
+
+function findInDoc(tx: string, doc: vscode.TextDocument) {
+  //if (message.type === 'nodeClicked') {
+  const mapaRangos = nodeRangesGet(doc.uri);
+  const rng = mapaRangos?.get(parseInt(tx));
+  if (rng) {
+    const startPos = doc.positionAt(rng.start);
+    const endPos = doc.positionAt(rng.end);
+    const range = new vscode.Range(startPos, endPos);
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      editor.selection = new vscode.Selection(startPos, endPos);
+      editor.revealRange(range);
+    }
+  }
+}
+
 export class SvgPreviewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'betterSvg.preview'
   private _view?: vscode.WebviewView | undefined
@@ -48,9 +66,16 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     const editor = vscode.window.activeTextEditor
     if (editor && editor.document.fileName.endsWith('.svg')) {
       this._currentDocument = editor.document
+
+      const txtOriginal = editor.document.getText();
+      const { txtModified, mapaRangos } = map2src(txtOriginal);
+
+      nodeRangesSet(editor.document.uri, mapaRangos); // ← guardas aquí
+
       webviewView.webview.html = this.getHtmlForWebview(
         webviewView.webview,
-        editor.document
+        //editor.document
+        txtModified
       )
     } else {
       webviewView.webview.html = this.getHtmlForWebview(
@@ -61,27 +86,32 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
 
     // Handle messages from webview
     webviewView.webview.onDidReceiveMessage((e) => {
-      switch (e.type) {
-        case 'update':
-          if (this._currentDocument) {
+      if (this._currentDocument) {
+        switch (e.type) {
+          case 'update':
             this.updateTextDocument(this._currentDocument, e.content)
-          }
-          break
-        case 'optimize':
-          if (this._currentDocument) {
+            break
+          case 'optimize':
             optimizeSvgDocument(this._currentDocument)
-          }
-          break
+            break
+          case 'find':
+            findInDoc(e.text, this._currentDocument);
+            break
+        }
       }
     })
   }
 
   public updatePreview(document: vscode.TextDocument) {
     if (this._view) {
+      const text = document.getText();
+      // creamos ranges asociados a elementos de svg (excluidos los no renderizables)
+      const { txtModified, mapaRangos } = map2src(text);
+      nodeRangesSet(document.uri, mapaRangos);
       this._currentDocument = document
       this._view.webview.postMessage({
         type: 'update',
-        content: document.getText()
+        content: txtModified
       })
     }
   }
@@ -95,12 +125,20 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public postPreview(type: string, content: string) {
+    if (this._view) {
+      this._view.webview.postMessage({ type: type, content: content })
+    }
+  }
+
   private getHtmlForWebview(
     webview: vscode.Webview,
-    document: vscode.TextDocument | null
+    //document: vscode.TextDocument | null
+    document: string | null
   ): string {
     try {
-      const svgContent = document ? document.getText() : '<svg></svg>'
+      // const svgContent = document ? document.getText() : '<svg></svg>'
+      const svgContent = (document) ? document : '<svg></svg>'
 
       // Get default color from configuration
       const config = vscode.workspace.getConfiguration('betterSvg')
@@ -143,8 +181,8 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
       } catch (readError: any) {
         vscode.window.showErrorMessage(
           'Better SVG: Failed to read HTML file!\n' +
-            `Path: ${htmlPath}\n` +
-            `Error: ${readError.message}`
+          `Path: ${htmlPath}\n` +
+          `Error: ${readError.message}`
         )
         throw readError
       }
@@ -161,11 +199,13 @@ export class SvgPreviewProvider implements vscode.WebviewViewProvider {
     } catch (error: any) {
       vscode.window.showErrorMessage(
         'Better SVG: Error in getHtmlForWebview!\n' +
-          `Message: ${error.message}\n` +
-          `Stack: ${error.stack?.substring(0, 200)}`
+        `Message: ${error.message}\n` +
+        `Stack: ${error.stack?.substring(0, 200)}`
       )
       throw error
     }
+
+
   }
 
   private updateTextDocument(document: vscode.TextDocument, content: string) {

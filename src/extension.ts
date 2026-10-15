@@ -31,6 +31,9 @@ import {
   optimizeSvgDocument
 } from './svgOptimizationService'
 
+import { parseStringToVsCodeColor, vsColor2str, setCachedColors } from './colorUtils'
+import {cache} from './svgUtils'
+
 let previewProvider: SvgPreviewProvider
 let gutterPreview: SvgGutterPreview
 
@@ -62,6 +65,48 @@ export function activate(context: vscode.ExtensionContext) {
       gutterPreview.updateDecorations(vscode.window.activeTextEditor)
     }
 
+    const svgColorProvider: vscode.DocumentColorProvider = {
+      provideDocumentColors(doc: vscode.TextDocument): vscode.ProviderResult<vscode.ColorInformation[]> {
+        const colores: vscode.ColorInformation[] = [];
+        const texto = doc.getText();
+
+        // Captura: #HEX, rgb(...), rgba(...), hsl(...), hsla(...) y palabras simples
+        const colorRegex = /(?:#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\([^)]+\)|hsla?\([^)]+\)|\b[a-zA-Z]+\b)/g;
+
+        let match;
+        while ((match = colorRegex.exec(texto)) !== null) {
+          const colorTxt = match[0].trim();
+
+          // Ignorar palabras clave de SVG que no son colores fijos o que no se pueden mezclar
+          if (['none', 'transparent', 'inherit', 'currentColor', 'url'].includes(colorTxt.toLowerCase())) {
+            continue;
+          }
+
+          const rango = new vscode.Range(doc.positionAt(match.index), doc.positionAt(match.index + match[0].length));
+          // Convertir el texto a un objeto vscode.Color válido
+          const vsColor = parseStringToVsCodeColor(colorTxt);
+          if (vsColor) {
+            colores.push(new vscode.ColorInformation(rango, vsColor));
+          }
+        }
+        setCachedColors(doc.uri, colores);
+        return colores;
+      },
+
+      provideColorPresentations(color: vscode.Color, context: { document: vscode.TextDocument; range: vscode.Range }
+      ): vscode.ProviderResult<vscode.ColorPresentation[]> {
+
+        const stringRes = vsColor2str(color);
+
+        const presentation = new vscode.ColorPresentation(stringRes);
+        presentation.textEdit = vscode.TextEdit.replace(context.range, stringRes);
+        return [presentation];
+      }
+    };
+
+    context.subscriptions.push(vscode.languages.registerColorProvider({ scheme: 'file', pattern: '**/*.svg' }, svgColorProvider));
+
+
     // Register SVG Hover Provider for all supported languages
     const svgHoverProvider = new SvgHoverProvider()
 
@@ -85,7 +130,7 @@ export function activate(context: vscode.ExtensionContext) {
     )
 
     // Update decorations when document changes
-    let timeout: NodeJS.Timeout | undefined
+    let timeout: ReturnType<typeof setTimeout> | undefined
     const triggerUpdate = (editor: vscode.TextEditor) => {
       if (timeout) {
         clearTimeout(timeout)
@@ -296,11 +341,30 @@ export function activate(context: vscode.ExtensionContext) {
         }
       )
     )
+
+
+    vscode.window.onDidChangeTextEditorSelection((evt: vscode.TextEditorSelectionChangeEvent) => {
+      const sels = evt.selections;
+      if (sels[0] && sels[0].start && evt.textEditor) {
+        const doc = evt.textEditor.document;
+        const docURI = doc.uri.toString() || "";
+        const pos = doc.offsetAt(sels[0].start);
+        console.log("pos", pos);
+        const thisRanges = cache.get(docURI);
+        if (thisRanges !== undefined) {
+          thisRanges.forEach((e, n) => {
+            if (pos >= e.start && pos <= e.end) {
+              previewProvider.postPreview("editing", n.toString());
+            }
+          });
+        }
+      }
+    })
   } catch (error: any) {
     vscode.window.showErrorMessage(
       'Better SVG: Failed to activate extension!\n' +
-        `Error: ${error.message}\n` +
-        `Stack: ${error.stack?.substring(0, 200)}`
+      `Error: ${error.message}\n` +
+      `Stack: ${error.stack?.substring(0, 200)}`
     )
     throw error
   }
@@ -354,4 +418,4 @@ export async function optimizeSvgInline(
   }
 }
 
-export function deactivate() {}
+export function deactivate() { }

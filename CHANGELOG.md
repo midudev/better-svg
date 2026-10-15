@@ -2,6 +2,14 @@
 
 All notable changes to the "Better SVG" extension will be documented in this file.
 
+## [0.5.2] - 2026-10-07
+
+### Added
+
+- Click on preview to select element declaration in source
+- Click on the source color watch opens the color mixer
+
+
 ## [0.5.1] - 2026-06-19
 
 ### Added
